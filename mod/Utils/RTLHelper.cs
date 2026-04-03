@@ -86,6 +86,13 @@ namespace AccessibilityMod.Utils
                 return text;
             }
 
+            // Determine reversal strategy. I2 uses two different reversal modes:
+            // - Pure Arabic text: full character-by-character reversal (numbers reversed too)
+            // - Mixed LTR+Arabic text: bidi-aware reversal (LTR runs preserved)
+            // When Latin letters precede Arabic, I2 preserved LTR runs, so we must
+            // re-reverse them after our full reversal to keep them correct.
+            bool preserveLTR = HasLatinBeforeArabic(text);
+
             // Normalize line endings before splitting — the game mixes \r\n and \n,
             // and stray \r can cause lines to merge or split incorrectly.
             string normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
@@ -96,7 +103,7 @@ namespace AccessibilityMod.Utils
             for (int i = 0; i < lines.Length; i++)
             {
                 if (ContainsRTLCharacters(lines[i]))
-                    lines[i] = ReverseLine(lines[i]);
+                    lines[i] = preserveLTR ? ReverseLinePreserveLTR(lines[i]) : ReverseLine(lines[i]);
             }
             string result = string.Join("\n", lines);
 
@@ -113,8 +120,8 @@ namespace AccessibilityMod.Utils
         /// <summary>
         /// Detect if Arabic text is in visual (I2-reversed) order using five signals:
         ///
-        /// 1. Punctuation/bracket check: Sentence-ending punctuation or closing brackets
-        ///    at string start indicate reversal from the end of logical text.
+        /// 1. Punctuation check: Sentence-ending punctuation (. ! ? : ;) at string start
+        ///    indicates reversal from the end of logical text.
         ///
         /// 2. Presentation form check: First Arabic PF is a FINAL form (last logical char
         ///    moved to first position). INITIAL/ISOLATED = logical order.
@@ -125,33 +132,11 @@ namespace AccessibilityMod.Utils
         /// 4. Word-final-only letters: Ta Marbuta (U+0629) or Alef Maqsura (U+0649)
         ///    at string start — impossible in logical Arabic.
         ///
-        /// 5. Connecting letter in base form: TMP's RTL shapes connecting letters to PF;
-        ///    I2's partial shaping leaves them as base Arabic alongside PF ligatures.
+        /// 5. I2 partial shaping: Lam-Alef ligature as ONLY PF with connecting letters
+        ///    in base form and zero other PF chars — unique to I2's ligature-only shaping.
         /// </summary>
         private static bool IsVisualOrder(string text)
         {
-            // Pre-check: If Latin letters appear before the first Arabic Presentation
-            // Form character, this is a logical bidi string (LTR segment like "AUTOSAVE"
-            // followed by RTL Arabic). I2-reversed text starts with Arabic or punctuation,
-            // never with valid Latin words — any Latin that existed would be at the end
-            // of the logical text and thus reversed into gibberish at the start.
-            bool seenLatin = false;
-            for (int i = 0; i < text.Length; i++)
-            {
-                char c = text[i];
-                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
-                {
-                    seenLatin = true;
-                    continue;
-                }
-                if (c >= 0xFE70 && c <= 0xFEFC)
-                {
-                    if (seenLatin)
-                        return false; // Latin before Arabic PF = logical bidi text
-                    break;
-                }
-            }
-
             // Signal 1: Check if text starts with sentence-ending punctuation followed
             // by Arabic. Skip leading whitespace and quotation marks first.
             for (int i = 0; i < text.Length; i++)
@@ -168,8 +153,10 @@ namespace AccessibilityMod.Utils
                 // If the first non-whitespace, non-quote char is sentence-ending punctuation
                 // and there are Arabic chars after it, this is visual order
                 if (c == '.' || c == '!' || c == '?' || c == '\u061F' || // U+061F = Arabic question mark
-                    c == ':' || c == '\u061B' || // U+061B = Arabic semicolon
-                    c == ']' || c == ')' || c == '}') // Closing brackets at start = reversed from end
+                    c == ':' || c == '\u061B') // U+061B = Arabic semicolon
+                    // Note: closing brackets (] ) }) are NOT included here because TMP's
+                    // native RTL mode uses bracket mirroring — ] in the string displays as [
+                    // visually. A ] at string start is normal for RTL logical text.
                 {
                     if (ContainsRTLCharacters(text.Substring(i + 1)))
                         return true;
@@ -227,25 +214,31 @@ namespace AccessibilityMod.Utils
                 break;
             }
 
-            // Signal 5: Connecting Arabic letter in base form alongside Presentation Forms.
-            // TMP's native RTL always shapes connecting letters (ب ت ث ج ك م ن etc.) to
-            // Presentation Form variants. Non-connecting letters (ا و ر د ز) may stay as base
-            // Arabic — this is normal and NOT a visual-order indicator.
-            // I2's partial shaping only creates ligatures (like Lam-Alef) and leaves ALL
-            // other characters as base Arabic, including connecting letters. So a connecting
-            // letter in base form (0621-064A) alongside any PF (FE70-FEFC) = I2 visual order.
+            // Signal 5: I2 partial shaping — only Lam-Alef ligatures shaped.
+            // I2 sometimes partially shapes text, creating only Lam-Alef ligatures
+            // (U+FEF5-FEFC) while leaving ALL other characters as base Arabic. TMP's
+            // shaping converts connecting letters in connected positions to PF forms,
+            // but may leave connecting letters in isolated position (after non-connecting
+            // chars) as base — so the presence of connecting letters in base form alone
+            // is not sufficient. We require all three conditions:
+            // 1. Lam-Alef ligature present (I2 shaped at least the ligature)
+            // 2. No other PF characters (I2 didn't shape anything else)
+            // 3. Connecting letter in base form (I2 left connected letters unshaped)
+            bool hasLamAlef = false;
+            bool hasOtherPF = false;
             bool hasConnectingInBase = false;
-            bool hasPF = false;
             for (int i = 0; i < text.Length; i++)
             {
                 char c = text[i];
+                if (c >= 0xFEF5 && c <= 0xFEFC)
+                    hasLamAlef = true;
+                else if (c >= 0xFE70 && c <= 0xFEF4)
+                    hasOtherPF = true;
                 if (IsConnectingArabicLetter(c))
                     hasConnectingInBase = true;
-                if (c >= 0xFE70 && c <= 0xFEFC)
-                    hasPF = true;
-                if (hasConnectingInBase && hasPF)
-                    return true;
             }
+            if (hasLamAlef && hasConnectingInBase && !hasOtherPF)
+                return true;
 
             // No signals found — default to not reversing.
             return false;
@@ -396,6 +389,106 @@ namespace AccessibilityMod.Utils
                 sb.Append(textElements[i]);
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Reverse a line while preserving LTR runs (Latin letters, digits).
+        /// Used when I2 performed bidi-aware reversal (Arabic reversed, LTR preserved).
+        /// After our full reversal, LTR runs need to be re-reversed to stay correct.
+        /// </summary>
+        private static string ReverseLinePreserveLTR(string text)
+        {
+            var elements = StringInfo.GetTextElementEnumerator(text);
+            var textElements = new System.Collections.Generic.List<string>();
+            while (elements.MoveNext())
+            {
+                textElements.Add(elements.GetTextElement());
+            }
+            textElements.Reverse();
+
+            var sb = new StringBuilder(text.Length);
+            int i = 0;
+            while (i < textElements.Count)
+            {
+                if (IsLTRElement(textElements[i]))
+                {
+                    int start = i;
+                    i++;
+                    while (i < textElements.Count)
+                    {
+                        if (IsLTRElement(textElements[i]))
+                        {
+                            i++;
+                        }
+                        else if (IsLTRConnector(textElements[i]) &&
+                                 i + 1 < textElements.Count &&
+                                 IsLTRElement(textElements[i + 1]))
+                        {
+                            i++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    // Re-reverse the LTR run
+                    for (int j = i - 1; j >= start; j--)
+                        sb.Append(textElements[j]);
+                }
+                else
+                {
+                    sb.Append(textElements[i]);
+                    i++;
+                }
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Check if Latin letters appear before the first Arabic character.
+        /// This indicates I2 used bidi-aware reversal (preserving LTR runs)
+        /// rather than full character-by-character reversal.
+        /// </summary>
+        private static bool HasLatinBeforeArabic(string text)
+        {
+            bool seenLatin = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+                {
+                    seenLatin = true;
+                    continue;
+                }
+                if (IsRTLChar(c))
+                    return seenLatin;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Check if a text element is an LTR character (Latin letter or digit).
+        /// </summary>
+        private static bool IsLTRElement(string element)
+        {
+            if (element.Length != 1) return false;
+            char c = element[0];
+            return (c >= '0' && c <= '9') ||
+                   (c >= 'A' && c <= 'Z') ||
+                   (c >= 'a' && c <= 'z') ||
+                   (c >= '\u0660' && c <= '\u0669') || // Arabic-Indic digits
+                   (c >= '\u06F0' && c <= '\u06F9');   // Extended Arabic-Indic digits
+        }
+
+        /// <summary>
+        /// Check if a text element connects parts of an LTR run
+        /// (hyphens in dates, periods in decimals, etc.).
+        /// </summary>
+        private static bool IsLTRConnector(string element)
+        {
+            if (element.Length != 1) return false;
+            char c = element[0];
+            return c == '-' || c == '.' || c == ':' || c == '/';
         }
 
         /// <summary>
