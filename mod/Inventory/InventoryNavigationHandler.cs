@@ -313,11 +313,11 @@ namespace AccessibilityMod.Inventory
 
                 // Try display name property
                 string name = item.displayName;
-                if (!string.IsNullOrEmpty(name)) return name;
+                if (!string.IsNullOrEmpty(name)) return RTLHelper.FixForScreenReader(name);
 
                 // Try list name
                 name = item.listName;
-                if (!string.IsNullOrEmpty(name)) return name;
+                if (!string.IsNullOrEmpty(name)) return RTLHelper.FixForScreenReader(name);
 
                 // Try getting from game object name
                 return item.gameObject.name.Replace("_", " ");
@@ -334,7 +334,7 @@ namespace AccessibilityMod.Inventory
             try
             {
                 if (item == null) return "";
-                return item.description;
+                return RTLHelper.FixForScreenReader(item.description);
             }
             catch (Exception ex)
             {

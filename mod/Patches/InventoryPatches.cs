@@ -66,7 +66,7 @@ namespace AccessibilityMod.Patches
             {
                 MelonLogger.Msg($"Equipment slot docked item: {itemName}");
                 string slotType = __instance.slotType.ToString().Replace("_", " ");
-                TolkScreenReader.Instance.Speak($"Equipped {itemName} to {slotType}", false);
+                TolkScreenReader.Instance.Speak($"Equipped {RTLHelper.FixForScreenReader(itemName)} to {slotType}", false);
             }
             catch (Exception ex)
             {
@@ -88,7 +88,7 @@ namespace AccessibilityMod.Patches
                 string itemName = __instance.prevItemName;
                 if (!string.IsNullOrEmpty(itemName))
                 {
-                    TolkScreenReader.Instance.Speak($"Unequipped {itemName} from {slotType}", false);
+                    TolkScreenReader.Instance.Speak($"Unequipped {RTLHelper.FixForScreenReader(itemName)} from {slotType}", false);
                 }
                 else
                 {
@@ -173,13 +173,13 @@ namespace AccessibilityMod.Patches
                     if (inventoryItemSlot.item != null && !string.IsNullOrEmpty(inventoryItemSlot.item.displayName))
                     {
                         MelonLogger.Msg($"[InventoryHighlighter] Slot has item: '{inventoryItemSlot.item.displayName}'");
-                        TolkScreenReader.Instance.Speak(inventoryItemSlot.item.displayName, true);
+                        TolkScreenReader.Instance.Speak(RTLHelper.FixForScreenReader(inventoryItemSlot.item.displayName), true);
                         return;
                     }
                     else if (!string.IsNullOrEmpty(inventoryItemSlot.itemName))
                     {
                         MelonLogger.Msg($"[InventoryHighlighter] Using slot itemName: '{inventoryItemSlot.itemName}'");
-                        TolkScreenReader.Instance.Speak(inventoryItemSlot.itemName, true);
+                        TolkScreenReader.Instance.Speak(RTLHelper.FixForScreenReader(inventoryItemSlot.itemName), true);
                         return;
                     }
                     else
@@ -199,13 +199,13 @@ namespace AccessibilityMod.Patches
                     if (childInventoryItemSlot.item != null && !string.IsNullOrEmpty(childInventoryItemSlot.item.displayName))
                     {
                         MelonLogger.Msg($"[InventoryHighlighter] Child slot has item: '{childInventoryItemSlot.item.displayName}'");
-                        TolkScreenReader.Instance.Speak(childInventoryItemSlot.item.displayName, true);
+                        TolkScreenReader.Instance.Speak(RTLHelper.FixForScreenReader(childInventoryItemSlot.item.displayName), true);
                         return;
                     }
                     else if (!string.IsNullOrEmpty(childInventoryItemSlot.itemName))
                     {
                         MelonLogger.Msg($"[InventoryHighlighter] Using child slot itemName: '{childInventoryItemSlot.itemName}'");
-                        TolkScreenReader.Instance.Speak(childInventoryItemSlot.itemName, true);
+                        TolkScreenReader.Instance.Speak(RTLHelper.FixForScreenReader(childInventoryItemSlot.itemName), true);
                         return;
                     }
                     else
@@ -438,7 +438,7 @@ namespace AccessibilityMod.Patches
                     return FormatInventoryItemForSpeech(inventoryItem);
                 }
             }
-            return itemName;
+            return RTLHelper.FixForScreenReader(itemName);
         }
 
         private static string FormatInventoryItemForSpeech(Il2CppSunshine.Metric.InventoryItem item)
@@ -450,11 +450,11 @@ namespace AccessibilityMod.Patches
                 // Add the display name
                 if (!string.IsNullOrEmpty(item.displayName))
                 {
-                    result.Append(item.displayName);
+                    result.Append(RTLHelper.FixForScreenReader(item.displayName));
                 }
                 else if (!string.IsNullOrEmpty(item.listName))
                 {
-                    result.Append(item.listName);
+                    result.Append(RTLHelper.FixForScreenReader(item.listName));
                 }
 
                 // Add equipment effects/bonuses
@@ -533,7 +533,7 @@ namespace AccessibilityMod.Patches
                 // Add item description if it exists
                 if (!string.IsNullOrEmpty(item.description))
                 {
-                    result.Append($" - Description: {item.description}");
+                    result.Append($" - Description: {RTLHelper.FixForScreenReader(item.description)}");
                 }
 
                 // Add item value if it exists
@@ -556,7 +556,7 @@ namespace AccessibilityMod.Patches
             catch (Exception ex)
             {
                 MelonLogger.Msg($"Error formatting inventory item: {ex.Message}");
-                return item.displayName ?? item.listName ?? "Unknown item";
+                return RTLHelper.FixForScreenReader(item.displayName ?? item.listName ?? "Unknown item");
             }
         }
         

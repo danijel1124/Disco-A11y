@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using MelonLoader;
 
 namespace AccessibilityMod.Utils
@@ -67,6 +68,11 @@ namespace AccessibilityMod.Utils
             if (string.IsNullOrEmpty(text) || !IsCurrentLanguageRTL())
                 return text;
 
+            // Strip Unity rich text tags before RTL processing. Tags like
+            // <color=#FFFFFF> would be reversed into gibberish (>FFFFFF#=roloc<)
+            // that the later StripHtmlTags in TolkScreenReader can't match.
+            text = Regex.Replace(text, @"<[^>]+>", "");
+
             if (!ContainsRTLCharacters(text))
                 return text;
 
@@ -80,9 +86,13 @@ namespace AccessibilityMod.Utils
                 return text;
             }
 
+            // Normalize line endings before splitting — the game mixes \r\n and \n,
+            // and stray \r can cause lines to merge or split incorrectly.
+            string normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
+
             // Reverse each line independently to preserve line order.
             // A full-string reverse would flip line order (Line1\nLine2 → Line2\nLine1).
-            string[] lines = text.Split('\n');
+            string[] lines = normalized.Split('\n');
             for (int i = 0; i < lines.Length; i++)
             {
                 if (ContainsRTLCharacters(lines[i]))
@@ -101,23 +111,47 @@ namespace AccessibilityMod.Utils
         }
 
         /// <summary>
-        /// Detect if Arabic text is in visual (I2-reversed) order using three signals:
+        /// Detect if Arabic text is in visual (I2-reversed) order using five signals:
         ///
-        /// 1. Punctuation check: In I2-reversed text, sentence-ending punctuation (. ! ? : ;)
-        ///    moves to the START of the string. Skips leading quotation marks first.
-        ///    In logical Arabic, these marks are always at the end, never the start.
+        /// 1. Punctuation/bracket check: Sentence-ending punctuation or closing brackets
+        ///    at string start indicate reversal from the end of logical text.
         ///
-        /// 2. Presentation form check: In I2-reversed text, the first Arabic Presentation
-        ///    Form character is a FINAL form (last logical char moved to first position).
-        ///    In logical-order text, it's INITIAL or ISOLATED.
+        /// 2. Presentation form check: First Arabic PF is a FINAL form (last logical char
+        ///    moved to first position). INITIAL/ISOLATED = logical order.
         ///
-        /// 3. Word-boundary check: In logical Arabic, a letter immediately after a space
-        ///    is always INITIAL or ISOLATED (start of word). In I2-reversed text, these
-        ///    positions contain FINAL or MEDIAL forms. This signal checks multiple word
-        ///    boundaries for high confidence.
+        /// 3. Word-boundary check: Post-space letters in FINAL/MEDIAL form indicate
+        ///    reversed word order (logical Arabic has INITIAL/ISOLATED after spaces).
+        ///
+        /// 4. Word-final-only letters: Ta Marbuta (U+0629) or Alef Maqsura (U+0649)
+        ///    at string start — impossible in logical Arabic.
+        ///
+        /// 5. Connecting letter in base form: TMP's RTL shapes connecting letters to PF;
+        ///    I2's partial shaping leaves them as base Arabic alongside PF ligatures.
         /// </summary>
         private static bool IsVisualOrder(string text)
         {
+            // Pre-check: If Latin letters appear before the first Arabic Presentation
+            // Form character, this is a logical bidi string (LTR segment like "AUTOSAVE"
+            // followed by RTL Arabic). I2-reversed text starts with Arabic or punctuation,
+            // never with valid Latin words — any Latin that existed would be at the end
+            // of the logical text and thus reversed into gibberish at the start.
+            bool seenLatin = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+                {
+                    seenLatin = true;
+                    continue;
+                }
+                if (c >= 0xFE70 && c <= 0xFEFC)
+                {
+                    if (seenLatin)
+                        return false; // Latin before Arabic PF = logical bidi text
+                    break;
+                }
+            }
+
             // Signal 1: Check if text starts with sentence-ending punctuation followed
             // by Arabic. Skip leading whitespace and quotation marks first.
             for (int i = 0; i < text.Length; i++)
@@ -134,7 +168,8 @@ namespace AccessibilityMod.Utils
                 // If the first non-whitespace, non-quote char is sentence-ending punctuation
                 // and there are Arabic chars after it, this is visual order
                 if (c == '.' || c == '!' || c == '?' || c == '\u061F' || // U+061F = Arabic question mark
-                    c == ':' || c == '\u061B') // U+061B = Arabic semicolon
+                    c == ':' || c == '\u061B' || // U+061B = Arabic semicolon
+                    c == ']' || c == ')' || c == '}') // Closing brackets at start = reversed from end
                 {
                     if (ContainsRTLCharacters(text.Substring(i + 1)))
                         return true;
@@ -179,8 +214,79 @@ namespace AccessibilityMod.Utils
                 }
             }
 
+            // Signal 4: Word-final-only characters at string start.
+            // Ta Marbuta (U+0629) and Alef Maqsura (U+0649) ONLY appear at the end of
+            // Arabic words — never at the start. Finding one as the first non-whitespace
+            // character is linguistically impossible in logical order.
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (char.IsWhiteSpace(c)) continue;
+                if (c == '\u0629' || c == '\u0649') // Ta Marbuta or Alef Maqsura
+                    return true;
+                break;
+            }
+
+            // Signal 5: Connecting Arabic letter in base form alongside Presentation Forms.
+            // TMP's native RTL always shapes connecting letters (ب ت ث ج ك م ن etc.) to
+            // Presentation Form variants. Non-connecting letters (ا و ر د ز) may stay as base
+            // Arabic — this is normal and NOT a visual-order indicator.
+            // I2's partial shaping only creates ligatures (like Lam-Alef) and leaves ALL
+            // other characters as base Arabic, including connecting letters. So a connecting
+            // letter in base form (0621-064A) alongside any PF (FE70-FEFC) = I2 visual order.
+            bool hasConnectingInBase = false;
+            bool hasPF = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (IsConnectingArabicLetter(c))
+                    hasConnectingInBase = true;
+                if (c >= 0xFE70 && c <= 0xFEFC)
+                    hasPF = true;
+                if (hasConnectingInBase && hasPF)
+                    return true;
+            }
+
             // No signals found — default to not reversing.
             return false;
+        }
+
+        /// <summary>
+        /// Check if a character is a base Arabic connecting letter (one that joins to the
+        /// following letter). In properly shaped text (TMP native RTL), these always appear
+        /// as Presentation Form variants, never as base Arabic.
+        /// </summary>
+        private static bool IsConnectingArabicLetter(char c)
+        {
+            switch (c)
+            {
+                case '\u0626': // Ya-hamza
+                case '\u0628': // Ba
+                case '\u062A': // Ta
+                case '\u062B': // Tha
+                case '\u062C': // Jim
+                case '\u062D': // Ha (haa)
+                case '\u062E': // Kha
+                case '\u0633': // Sin
+                case '\u0634': // Shin
+                case '\u0635': // Sad
+                case '\u0636': // Dad
+                case '\u0637': // Tah
+                case '\u0638': // Zah
+                case '\u0639': // Ain
+                case '\u063A': // Ghain
+                case '\u0641': // Fa
+                case '\u0642': // Qaf
+                case '\u0643': // Kaf
+                case '\u0644': // Lam
+                case '\u0645': // Meem
+                case '\u0646': // Noon
+                case '\u0647': // Ha (ha)
+                case '\u064A': // Ya
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>
@@ -266,14 +372,13 @@ namespace AccessibilityMod.Utils
         }
 
         /// <summary>
-        /// Reverse a single line of text, correctly handling surrogate pairs,
-        /// combining characters, and LTR number runs.
+        /// Reverse a single line of text, correctly handling surrogate pairs
+        /// and combining characters.
         ///
-        /// When I2 Localization reverses Arabic text for visual display, it also
-        /// reverses embedded number sequences (e.g. "09-21" becomes "12-90"). We
-        /// collect text elements, reverse their order, then re-reverse any LTR runs
-        /// (digits plus connecting punctuation like hyphens, colons, periods between
-        /// digits) so numbers and dates read correctly in the final output.
+        /// I2 Localization reverses the entire string character-by-character for
+        /// visual RTL display, including embedded numbers. A simple reversal back
+        /// to logical order automatically restores both Arabic text and number
+        /// sequences to their correct reading order.
         /// </summary>
         private static string ReverseLine(string text)
         {
@@ -285,70 +390,12 @@ namespace AccessibilityMod.Utils
             }
             textElements.Reverse();
 
-            // Fix LTR runs: sequences of digits (possibly connected by punctuation
-            // like - . : / between digits) need to be re-reversed so they read LTR.
             var sb = new StringBuilder(text.Length);
-            int i = 0;
-            while (i < textElements.Count)
+            for (int i = 0; i < textElements.Count; i++)
             {
-                if (IsDigitElement(textElements[i]))
-                {
-                    int start = i;
-                    i++;
-                    while (i < textElements.Count)
-                    {
-                        if (IsDigitElement(textElements[i]))
-                        {
-                            i++;
-                        }
-                        else if (IsNumberConnector(textElements[i]) &&
-                                 i + 1 < textElements.Count &&
-                                 IsDigitElement(textElements[i + 1]))
-                        {
-                            // Include connector (e.g. hyphen) only if followed by more digits
-                            i++;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                    // Re-reverse the LTR run
-                    for (int j = i - 1; j >= start; j--)
-                        sb.Append(textElements[j]);
-                }
-                else
-                {
-                    sb.Append(textElements[i]);
-                    i++;
-                }
+                sb.Append(textElements[i]);
             }
             return sb.ToString();
-        }
-
-        /// <summary>
-        /// Check if a text element is a digit character (ASCII 0-9 or Arabic-Indic digits).
-        /// </summary>
-        private static bool IsDigitElement(string element)
-        {
-            if (element.Length != 1) return false;
-            char c = element[0];
-            return (c >= '0' && c <= '9') ||        // ASCII digits
-                   (c >= '\u0660' && c <= '\u0669') || // Arabic-Indic digits ٠-٩
-                   (c >= '\u06F0' && c <= '\u06F9');   // Extended Arabic-Indic digits ۰-۹
-        }
-
-        /// <summary>
-        /// Check if a text element is punctuation that connects parts of a number
-        /// (e.g. hyphens in dates "09-21", colons in times "12:30", periods in
-        /// decimals "3.5", slashes in dates "09/21"). These should stay inside
-        /// an LTR run when they appear between digits.
-        /// </summary>
-        private static bool IsNumberConnector(string element)
-        {
-            if (element.Length != 1) return false;
-            char c = element[0];
-            return c == '-' || c == '.' || c == ':' || c == '/';
         }
 
         /// <summary>
