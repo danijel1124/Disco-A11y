@@ -114,7 +114,7 @@ namespace AccessibilityMod.Input
             else if (KeyBindings.IsPressed(GameKey.SelectLoot))
             {
                 if (navigationSystem.IsWaypointFocus)
-                    TolkScreenReader.Instance.Speak("Press the NPC waypoints key for NPC waypoints, the locations key for locations, or the everything key for all.", true);
+                    TolkScreenReader.Instance.Speak($"Press {KeyBindings.SpeakableName(GameKey.SelectNpcs)} for NPC waypoints, {KeyBindings.SpeakableName(GameKey.SelectLocations)} for locations, or {KeyBindings.SpeakableName(GameKey.SelectEverything)} for all.", true);
                 else
                     navigationSystem.SelectCategory(ObjectCategory.Loot);
             }
@@ -144,6 +144,13 @@ namespace AccessibilityMod.Input
             if (KeyBindings.IsPressed(GameKey.NavigateToSelected))
             {
                 navigationSystem.NavigateToSelectedObject();
+            }
+
+            // Interact with the selected object (keyboard equivalent of clicking it -
+            // the game's own E-Interact only works with controller selection)
+            if (KeyBindings.IsPressed(GameKey.InteractWithSelected))
+            {
+                navigationSystem.InteractWithSelectedObject();
             }
 
             // Stop automated movement

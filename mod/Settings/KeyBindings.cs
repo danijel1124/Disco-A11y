@@ -84,6 +84,9 @@ namespace AccessibilityMod.Settings
             [GameKey.CycleForward] = new KeyBinding(KeyCode.Period),
             [GameKey.CycleBackward] = new KeyBinding(KeyCode.Period, requireShift: true),
             [GameKey.NavigateToSelected] = new KeyBinding(KeyCode.Comma),
+            // F is free in the game (its own E-Interact only works with the
+            // controller-selection flow, which keyboard play never populates).
+            [GameKey.InteractWithSelected] = new KeyBinding(KeyCode.F),
             [GameKey.StopMovement] = new KeyBinding(KeyCode.Slash),
 
             [GameKey.ToggleDialogReading] = new KeyBinding(KeyCode.Minus),
@@ -135,6 +138,7 @@ namespace AccessibilityMod.Settings
             [GameKey.CycleBackward] = new KeyBinding(KeyCode.PageUp),
             // stardew-access: left ctrl + home = move to selected object.
             [GameKey.NavigateToSelected] = new KeyBinding(KeyCode.Home, requireCtrl: true),
+            [GameKey.InteractWithSelected] = new KeyBinding(KeyCode.F),
             // Space is the game's own built-in stop key.
             [GameKey.StopMovement] = new KeyBinding(KeyCode.Space),
 
@@ -194,6 +198,18 @@ namespace AccessibilityMod.Settings
         }
 
         public static KeyBinding Get(GameKey action) => current[action];
+
+        /// <summary>
+        /// Speech-friendly name of the key currently bound to an action, for use in
+        /// spoken hint texts ("Press X to ..."). Always reflects the live binding, so
+        /// hints stay correct after remapping - never hardcode key names in
+        /// announcements. "Ctrl+PageDown" becomes "Ctrl plus Page Down".
+        /// </summary>
+        public static string SpeakableName(GameKey action)
+        {
+            var described = Get(action).Describe().Replace("+", " plus ");
+            return System.Text.RegularExpressions.Regex.Replace(described, "(?<=[a-z0-9])(?=[A-Z0-9])", " ");
+        }
 
         public static void Set(GameKey action, KeyBinding binding)
         {

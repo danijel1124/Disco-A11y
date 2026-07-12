@@ -5,6 +5,7 @@ using UnityEngine;
 using Il2Cpp;
 using Il2CppFortressOccident;
 using AccessibilityMod.Utils;
+using AccessibilityMod.Settings;
 
 namespace AccessibilityMod.Navigation
 {
@@ -256,7 +257,7 @@ namespace AccessibilityMod.Navigation
             string sortModeHint = SortingMode == SortingMode.Directional ? " (clockwise)" : " (by distance)";
             string reachabilityHint = IsReachable == false ? " Not reachable on foot from here." : "";
             return $"{ObjectName} {Distance:F0} meters {Direction}, {CurrentIndex} of {TotalCount}.{reachabilityHint} " +
-                   "Press period to cycle, comma to navigate.";
+                   $"Press {KeyBindings.SpeakableName(GameKey.CycleForward)} to cycle, {KeyBindings.SpeakableName(GameKey.NavigateToSelected)} to navigate.";
         }
     }
 }

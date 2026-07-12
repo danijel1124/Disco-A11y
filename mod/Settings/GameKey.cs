@@ -25,6 +25,7 @@ namespace AccessibilityMod.Settings
         CycleForward,
         CycleBackward,
         NavigateToSelected,
+        InteractWithSelected,
         StopMovement,
 
         ToggleDialogReading,

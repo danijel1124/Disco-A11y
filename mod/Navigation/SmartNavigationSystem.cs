@@ -5,6 +5,7 @@ using UnityEngine;
 using Il2Cpp;
 using Il2CppFortressOccident;
 using AccessibilityMod.Utils;
+using AccessibilityMod.Settings;
 using UnityEngine.SceneManagement;
 using MelonLoader;
 
@@ -125,8 +126,8 @@ namespace AccessibilityMod.Navigation
             if (!waypointManager.HasWaypointsInScene(sceneKey))
             {
                 string message = waypointManager.HasAnyWaypoints
-                    ? "No waypoints saved for this area. Press Alt plus Left Bracket to create one here."
-                    : "No waypoints saved yet. Press Alt plus Left Bracket to create one.";
+                    ? $"No waypoints saved for this area. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one here."
+                    : $"No waypoints saved yet. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one.";
                 TolkScreenReader.Instance.Speak(message, true);
                 return;
             }
@@ -258,12 +259,12 @@ namespace AccessibilityMod.Navigation
             {
                 if (!waypointManager.HasAnyWaypoints)
                 {
-                    string message = "No waypoints saved yet. Press Alt plus Left Bracket to create one.";
+                    string message = $"No waypoints saved yet. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one.";
                     TolkScreenReader.Instance.Speak(message, true);
                 }
                 else
                 {
-                    TolkScreenReader.Instance.Speak("Focus waypoints first with Ctrl plus Left Bracket, then press Alt plus Right Bracket to delete.", true);
+                    TolkScreenReader.Instance.Speak($"Focus waypoints first with {KeyBindings.SpeakableName(GameKey.FocusWaypoints)}, then press {KeyBindings.SpeakableName(GameKey.DeleteWaypoint)} to delete.", true);
                 }
                 return;
             }
@@ -271,8 +272,8 @@ namespace AccessibilityMod.Navigation
             if (!waypointManager.TryGetSelection(sceneKey, out var waypoint, out _, out _))
             {
                 string message = waypointManager.HasAnyWaypoints
-                    ? "No waypoints saved for this area. Press Alt plus Left Bracket to create one here."
-                    : "No waypoints saved yet. Press Alt plus Left Bracket to create one.";
+                    ? $"No waypoints saved for this area. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one here."
+                    : $"No waypoints saved yet. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one.";
                 TolkScreenReader.Instance.Speak(message, true);
                 return;
             }
@@ -323,8 +324,8 @@ namespace AccessibilityMod.Navigation
                         string message = filter.HasValue
                             ? $"No {label} waypoints in this area."
                             : (waypointManager.HasAnyWaypoints
-                                ? "No waypoints saved for this area. Press Alt plus Left Bracket to create one here."
-                                : "No waypoints saved yet. Press Alt plus Left Bracket to create one.");
+                                ? $"No waypoints saved for this area. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one here."
+                                : $"No waypoints saved yet. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one.");
                         TolkScreenReader.Instance.Speak(message, true);
                         return;
                     }
@@ -368,6 +369,59 @@ namespace AccessibilityMod.Navigation
             }
         }
 
+        /// <summary>
+        /// Keyboard equivalent of clicking the currently selected object. The game's own
+        /// E-Interact only acts on its controller-driven interactable selection, which
+        /// keyboard-only play never populates - so this drives the click pipeline
+        /// (MouseOverHighlight.InteractFirstActive) directly on the mod's selection.
+        /// </summary>
+        public void InteractWithSelectedObject()
+        {
+            if (IsWaypointNamingActive)
+            {
+                TolkScreenReader.Instance.Speak("Finish naming your waypoint first. Press Enter to save or Escape to cancel.", true);
+                return;
+            }
+
+            if (currentFocus == NavigationFocus.Waypoints)
+            {
+                TolkScreenReader.Instance.Speak($"Waypoints are positions, not objects. Press {KeyBindings.SpeakableName(GameKey.NavigateToSelected)} to walk there instead.", true);
+                return;
+            }
+
+            try
+            {
+                var selectedObject = stateManager.GetCurrentSelectedObject();
+                if (selectedObject == null)
+                {
+                    TolkScreenReader.Instance.Speak($"No object selected. Select a category first, then use {KeyBindings.SpeakableName(GameKey.CycleForward)} to cycle.", true);
+                    return;
+                }
+
+                string objectName = ObjectNameCleaner.GetBetterObjectName(selectedObject);
+
+                var entity = selectedObject.GetFirstActive();
+                Vector3 playerPos = GameObjectUtils.GetPlayerPosition();
+                if (entity != null && playerPos != Vector3.zero && !entity.IsWithinInteractionRadius(playerPos))
+                {
+                    TolkScreenReader.Instance.Speak($"{objectName} is too far away. Press {KeyBindings.SpeakableName(GameKey.NavigateToSelected)} to walk there first.", true);
+                    return;
+                }
+
+                bool interacted = selectedObject.InteractFirstActive(new Interactable.ClickEventData());
+                MelonLogger.Msg($"[SMART NAV] InteractFirstActive on {objectName}: {interacted}");
+                if (!interacted)
+                {
+                    TolkScreenReader.Instance.Speak($"Cannot interact with {objectName} right now.", true);
+                }
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error($"[SMART NAV] Error interacting with selected object: {ex}");
+                TolkScreenReader.Instance.Speak("Interaction failed.", true);
+            }
+        }
+
         public void NavigateToSelectedObject()
         {
             if (IsWaypointNamingActive)
@@ -384,8 +438,8 @@ namespace AccessibilityMod.Navigation
                     if (!waypointManager.TryGetSelection(sceneKey, out var waypoint, out _, out _))
                     {
                         string message = waypointManager.HasAnyWaypoints
-                            ? "No waypoints saved for this area. Press Alt plus Left Bracket to create one here."
-                            : "No waypoints saved yet. Press Alt plus Left Bracket to create one.";
+                            ? $"No waypoints saved for this area. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one here."
+                            : $"No waypoints saved yet. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one.";
                         TolkScreenReader.Instance.Speak(message, true);
                         return;
                     }
@@ -400,7 +454,7 @@ namespace AccessibilityMod.Navigation
                 var selectedObject = stateManager.GetCurrentSelectedObject();
                 if (selectedObject == null || selectedObject.transform == null)
                 {
-                    TolkScreenReader.Instance.Speak("No object selected. Select a category first, then use period to cycle.", true);
+                    TolkScreenReader.Instance.Speak($"No object selected. Select a category first, then use {KeyBindings.SpeakableName(GameKey.CycleForward)} to cycle.", true);
                     return;
                 }
                 
@@ -761,14 +815,14 @@ namespace AccessibilityMod.Navigation
             if (!waypointManager.TryGetSelection(sceneKey, out var waypoint, out int selectedIndex, out int totalCount))
             {
                 string message = waypointManager.HasAnyWaypoints
-                    ? "No waypoints saved for this area. Press Alt plus Left Bracket to create one here."
-                    : "No waypoints saved yet. Press Alt plus Left Bracket to create one.";
+                    ? $"No waypoints saved for this area. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one here."
+                    : $"No waypoints saved yet. Press {KeyBindings.SpeakableName(GameKey.CreateWaypoint)} to create one.";
                 TolkScreenReader.Instance.Speak(message, true);
                 return;
             }
 
             Vector3 playerPos = GameObjectUtils.GetPlayerPosition();
-            string controlsInstruction = "Press period to cycle, comma to navigate, Alt plus Right Bracket to delete.";
+            string controlsInstruction = $"Press {KeyBindings.SpeakableName(GameKey.CycleForward)} to cycle, {KeyBindings.SpeakableName(GameKey.NavigateToSelected)} to navigate, {KeyBindings.SpeakableName(GameKey.DeleteWaypoint)} to delete.";
             string announcement;
 
             if (playerPos != Vector3.zero)

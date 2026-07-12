@@ -32,6 +32,7 @@ public static class GameKeyCatalog
         new("CycleForward", "Cycle category forward", "In Kategorie weiter", "Period|False|False|False", "PageDown|False|False|False", "PageDown|False|False|False"),
         new("CycleBackward", "Cycle category backward", "In Kategorie zurück", "Period|False|False|True", "PageUp|False|False|False", "PageUp|False|False|False"),
         new("NavigateToSelected", "Walk to selected object", "Zum ausgewählten Objekt gehen", "Comma|False|False|False", "Home|True|False|False", "Home|True|False|False"),
+        new("InteractWithSelected", "Interact with selected object", "Mit ausgewähltem Objekt interagieren", "F|False|False|False", "F|False|False|False", "F|False|False|False"),
         new("StopMovement", "Stop movement", "Bewegung stoppen", "Slash|False|False|False", "Space|False|False|False", "Space|False|False|False"),
 
         new("ToggleDialogReading", "Toggle dialog reading mode", "Dialog-Lesemodus umschalten", "Minus|False|False|False", "KeypadDivide|False|False|False", "F12|False|False|False"),
