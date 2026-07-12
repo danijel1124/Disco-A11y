@@ -21,6 +21,13 @@ namespace AccessibilityMod
         private UINavigationHandler uiNavigationHandler;
         private InventoryNavigationHandler inventoryHandler;
 
+        /// <summary>
+        /// The live navigation system, exposed for companion mods (the AI dev bridge in
+        /// tools/DevBridge drives the mod through this instead of simulating keys).
+        /// Null until OnInitializeMelon has run.
+        /// </summary>
+        public static SmartNavigationSystem NavigationSystem { get; private set; }
+
         public override void OnInitializeMelon()
         {
             LoggerInstance.Msg("Accessibility Mod initializing...");
@@ -85,6 +92,7 @@ namespace AccessibilityMod
 
             // Initialize modular systems
             navigationSystem = new SmartNavigationSystem();
+            NavigationSystem = navigationSystem;
             inputManager = new InputManager(navigationSystem);
             uiNavigationHandler = new UINavigationHandler();
             inventoryHandler = InventoryNavigationHandler.Instance;

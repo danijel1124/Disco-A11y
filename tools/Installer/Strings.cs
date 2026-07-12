@@ -21,8 +21,12 @@ public static class Strings
         ["Browse"] = ("Browse...", "Durchsuchen..."),
         ["BrowseDialogTitle"] = ("Select the Disco Elysium game folder", "Disco-Elysium-Spielordner auswählen"),
         ["Install"] = ("Install / Update", "Installieren / Aktualisieren"),
-        ["OpenKeybindEditor"] = ("Open Keybind Editor", "Tastenbelegung öffnen"),
+        ["OpenKeybindEditor"] = ("Open Mod Configurator", "Mod-Konfigurator öffnen"),
         ["PrereleaseCheck"] = ("Install latest prerelease (nightly)", "Aktuellstes Prerelease laden (Nightly)"),
+        ["DevBridgeCheck"] = ("Enable AI dev bridge", "AI-Dev-Bridge aktivieren"),
+        ["StepDevBridgeInstalled"] = ("AI dev bridge installed (Mods/DevBridge.dll). Command channel: UserData/DevBridge/.", "AI-Dev-Bridge installiert (Mods/DevBridge.dll). Kommandokanal: UserData/DevBridge/."),
+        ["StepDevBridgeRemoved"] = ("AI dev bridge removed.", "AI-Dev-Bridge entfernt."),
+        ["StepDevBridgeMissing"] = ("DevBridge.dll not found next to this installer - AI dev bridge skipped.", "DevBridge.dll liegt nicht neben diesem Installer - AI-Dev-Bridge übersprungen."),
         ["LogAccessible"] = ("Installation log", "Installationsprotokoll"),
 
         ["StatusGamePathMissing"] = ("Game folder not found. Please use 'Browse...' to select it.", "Spielordner nicht gefunden. Bitte über 'Durchsuchen...' auswählen."),
@@ -52,8 +56,8 @@ public static class Strings
 
         ["KeybindEditorNotFound"] = ("Keybind Editor not found next to this installer. Build tools/KeybindEditor first.", "Tastenbelegungs-Editor liegt nicht neben diesem Installer. Bitte zuerst tools/KeybindEditor bauen."),
 
-        ["ShortcutFileName"] = ("Disco Elysium - Accessibility Mod Configure Keybinds", "Disco Elysium - Accessibility Mod Tastenbelegung konfigurieren"),
-        ["ShortcutDescription"] = ("Configure the Disco Elysium Accessibility Mod's keybinds", "Tastenbelegung des Disco Elysium Accessibility Mod konfigurieren"),
+        ["ShortcutFileName"] = ("Disco Elysium - Accessibility Mod Configurator", "Disco Elysium - Accessibility-Mod-Konfigurator"),
+        ["ShortcutDescription"] = ("Configure the Disco Elysium Accessibility Mod (keybinds and settings)", "Disco Elysium Accessibility Mod konfigurieren (Tasten und Einstellungen)"),
         ["StepShortcutCreated"] = ("Start Menu shortcut created: {0}", "Startmenü-Verknüpfung erstellt: {0}"),
         ["StepShortcutFailed"] = ("Could not create Start Menu shortcut: {0}", "Startmenü-Verknüpfung konnte nicht erstellt werden: {0}"),
         ["StepShortcutSkipped"] = ("Keybind Editor not found - skipping Start Menu shortcut.", "Tastenbelegungs-Editor nicht gefunden - Startmenü-Verknüpfung übersprungen."),

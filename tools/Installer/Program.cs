@@ -13,7 +13,9 @@ internal static class Program
             var gamePathArg = args.Skip(1).FirstOrDefault(a => !a.StartsWith("--"));
             var force = args.Contains("--force");
             var prerelease = args.Contains("--prerelease");
-            RunCli(gamePathArg, force, prerelease).GetAwaiter().GetResult();
+            // tri-state: --devbridge installs it, --no-devbridge removes it, neither leaves it alone
+            bool? devBridge = args.Contains("--devbridge") ? true : args.Contains("--no-devbridge") ? false : null;
+            RunCli(gamePathArg, force, prerelease, devBridge).GetAwaiter().GetResult();
             return;
         }
 
@@ -22,13 +24,14 @@ internal static class Program
     }
 
     /// <summary>
-    /// Non-interactive install: DiscoElysiumInstaller.exe --cli [gamePath] [--force] [--prerelease]
+    /// Non-interactive install: DiscoElysiumInstaller.exe --cli [gamePath] [--force] [--prerelease] [--devbridge|--no-devbridge]
     /// Installs/updates MelonLoader (skipped if already present, unless --force) and the
     /// mod itself, printing progress to the console. Auto-detects the game folder via
     /// Steam if gamePath is omitted. --prerelease installs the newest release including
-    /// prereleases (the nightly channel) instead of the latest stable.
+    /// prereleases (the nightly channel) instead of the latest stable. --devbridge
+    /// additionally installs the AI dev bridge companion mod, --no-devbridge removes it.
     /// </summary>
-    private static async Task RunCli(string? gamePathOverride, bool force, bool includePrerelease)
+    private static async Task RunCli(string? gamePathOverride, bool force, bool includePrerelease, bool? devBridge)
     {
         void Log(string s) => Console.WriteLine(s);
 
@@ -56,6 +59,18 @@ internal static class Program
 
             var tag = await ModInstaller.InstallLatestAsync(gamePath, Log, includePrerelease);
             Log($"Mod installed (release {tag}).");
+
+            if (devBridge.HasValue)
+            {
+                var bridgeResult = ModInstaller.SetDevBridgeEnabled(gamePath, devBridge.Value);
+                Log(bridgeResult switch
+                {
+                    ModInstaller.DevBridgeResult.Installed => "AI dev bridge installed (Mods/DevBridge.dll). Command channel: UserData/DevBridge/.",
+                    ModInstaller.DevBridgeResult.Removed => "AI dev bridge removed.",
+                    ModInstaller.DevBridgeResult.SourceMissing => "DevBridge.dll not found next to this installer - AI dev bridge skipped.",
+                    _ => "AI dev bridge not present.",
+                });
+            }
 
             var exe = KeybindEditorLocator.Find();
             if (exe != null)

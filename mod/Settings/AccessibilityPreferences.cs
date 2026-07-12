@@ -11,6 +11,7 @@ namespace AccessibilityMod.Settings
         private static MelonPreferences_Entry<bool> speechInterruptEntry;
         private static MelonPreferences_Entry<bool> speakAudioCaptionsEntry;
         private static MelonPreferences_Entry<bool> dialogAutoAdvanceEntry;
+        private static MelonPreferences_Entry<bool> autoInteractEntry;
 
         public static void Initialize()
         {
@@ -31,6 +32,9 @@ namespace AccessibilityMod.Settings
 
             dialogAutoAdvanceEntry = category.CreateEntry<bool>("DialogAutoAdvance", false,
                 "Automatically continue dialogue once the screen reader finishes the current line");
+
+            autoInteractEntry = category.CreateEntry<bool>("AutoInteract", false,
+                "Automatically interact with the target object after auto-walk arrives");
 
             MelonLogger.Msg($"[PREFERENCES] Initialized - Dialog: {GetDialogMode()}, Orbs: {GetOrbAnnouncements()}, Interrupt: {GetSpeechInterrupt()}, AudioCaptions: {GetSpeakAudioCaptions()}");
         }
@@ -81,6 +85,17 @@ namespace AccessibilityMod.Settings
         public static void SetDialogAutoAdvance(bool enabled)
         {
             dialogAutoAdvanceEntry.Value = enabled;
+            category.SaveToFile();
+        }
+
+        public static bool GetAutoInteract()
+        {
+            return autoInteractEntry.Value;
+        }
+
+        public static void SetAutoInteract(bool enabled)
+        {
+            autoInteractEntry.Value = enabled;
             category.SaveToFile();
         }
 

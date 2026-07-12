@@ -19,7 +19,7 @@ public static class Strings
 
     private static readonly Dictionary<string, (string En, string De)> Table = new()
     {
-        ["WindowTitle"] = ("Disco Elysium - Keybind Editor", "Disco Elysium – Tastenbelegung"),
+        ["WindowTitle"] = ("Disco Elysium - Accessibility Mod Configurator", "Disco Elysium – Accessibility-Mod-Konfigurator"),
         ["GamePathLabel"] = ("Game folder:", "Spielordner:"),
         ["GamePathAccessible"] = ("Path to the Disco Elysium game folder", "Pfad zum Disco-Elysium-Spielordner"),
         ["Browse"] = ("Browse...", "Durchsuchen..."),
@@ -41,6 +41,7 @@ public static class Strings
         ["SpeechInterrupt"] = ("Speech interrupt on", "Sprachunterbrechung aktiv"),
         ["SpeakAudioCaptions"] = ("Speak sound captions", "Geräusch-Untertitel vorlesen"),
         ["DialogAutoAdvance"] = ("Auto-advance dialog after reading (autoread)", "Dialog nach dem Vorlesen automatisch weiterschalten (Autoread)"),
+        ["AutoInteract"] = ("Auto-interact on arrival", "Bei Ankunft automatisch interagieren"),
         ["Save"] = ("Save", "Speichern"),
         ["StatusAccessible"] = ("Status", "Status"),
         ["LanguageLabel"] = ("Language:", "Sprache:"),

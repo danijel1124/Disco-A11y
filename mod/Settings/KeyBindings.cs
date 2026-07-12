@@ -90,6 +90,7 @@ namespace AccessibilityMod.Settings
             // F is free in the game (its own E-Interact only works with the
             // controller-selection flow, which keyboard play never populates).
             [GameKey.InteractWithSelected] = new KeyBinding(KeyCode.F),
+            [GameKey.ToggleAutoInteract] = new KeyBinding(KeyCode.F, requireCtrl: true),
             [GameKey.StopMovement] = new KeyBinding(KeyCode.Slash),
 
             [GameKey.ToggleDialogReading] = new KeyBinding(KeyCode.Minus),
@@ -145,6 +146,7 @@ namespace AccessibilityMod.Settings
             // stardew-access: left ctrl + home = move to selected object.
             [GameKey.NavigateToSelected] = new KeyBinding(KeyCode.Home, requireCtrl: true),
             [GameKey.InteractWithSelected] = new KeyBinding(KeyCode.F),
+            [GameKey.ToggleAutoInteract] = new KeyBinding(KeyCode.F, requireCtrl: true),
             // Space is the game's own built-in stop key.
             [GameKey.StopMovement] = new KeyBinding(KeyCode.Space),
 

@@ -155,8 +155,18 @@ namespace AccessibilityMod.Input
             }
 
             // Interact with the selected object (keyboard equivalent of clicking it -
-            // the game's own E-Interact only works with controller selection)
-            if (KeyBindings.IsPressed(GameKey.InteractWithSelected))
+            // the game's own E-Interact only works with controller selection).
+            // ToggleAutoInteract shares the base key (Ctrl+F vs F), so the more
+            // specific binding is checked first in the same chain.
+            if (KeyBindings.IsPressed(GameKey.ToggleAutoInteract))
+            {
+                bool newValue = !AccessibilityPreferences.GetAutoInteract();
+                AccessibilityPreferences.SetAutoInteract(newValue);
+                TolkScreenReader.Instance.Speak(newValue
+                    ? "Auto interact enabled: arriving at an object interacts with it."
+                    : "Auto interact disabled", true);
+            }
+            else if (KeyBindings.IsPressed(GameKey.InteractWithSelected))
             {
                 navigationSystem.InteractWithSelectedObject();
             }

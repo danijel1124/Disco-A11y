@@ -28,6 +28,7 @@ namespace AccessibilityMod.Settings
         CycleCategoryBackward,
         NavigateToSelected,
         InteractWithSelected,
+        ToggleAutoInteract,
         StopMovement,
 
         ToggleDialogReading,

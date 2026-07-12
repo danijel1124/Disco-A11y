@@ -26,9 +26,10 @@ namespace AccessibilityMod
         Queueable
     }
     /// <summary>
-    /// Wrapper around the Tolk screen reader integration library
+    /// Wrapper around the Tolk screen reader integration library. Public so companion
+    /// mods (the AI dev bridge) can observe speech output.
     /// </summary>
-    internal class TolkScreenReader
+    public class TolkScreenReader
     {
         private static TolkScreenReader instance;
         private bool isInitialized = false;

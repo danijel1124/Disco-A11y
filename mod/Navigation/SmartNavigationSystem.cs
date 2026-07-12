@@ -37,11 +37,28 @@ namespace AccessibilityMod.Navigation
         public bool IsWaypointFocus => currentFocus == NavigationFocus.Waypoints;
         public bool IsCategorySelectionActive => isCategorySelectionActive;
 
+        // True while the current auto-walk targets a world object (as opposed to a
+        // waypoint, which is a bare position with nothing to interact with).
+        private bool lastNavigationTargetWasObject;
+
+        /// <summary>Current selection snapshot, exposed for companion mods (AI dev bridge).</summary>
+        public NavigationInfo GetNavigationInfo() =>
+            stateManager.GetCurrentNavigationInfo(GameObjectUtils.GetPlayerPosition());
+
         public SmartNavigationSystem()
         {
             stateManager = new NavigationStateManager();
             movementController = new MovementController();
             waypointManager = new WaypointManager();
+            movementController.OnMovementCompleted += OnArrived;
+        }
+
+        private void OnArrived(string _)
+        {
+            if (!lastNavigationTargetWasObject) return;
+            if (!AccessibilityPreferences.GetAutoInteract()) return;
+
+            InteractWithSelectedObject();
         }
 
         public void SelectCategory(ObjectCategory category)
@@ -494,6 +511,7 @@ namespace AccessibilityMod.Navigation
                     MelonLogger.Msg($"[WAYPOINTS] Navigating to waypoint {waypoint.Name}");
                     TolkScreenReader.Instance.Speak($"Calculating path to waypoint {waypoint.Name}...", true);
 
+                    lastNavigationTargetWasObject = false;
                     movementController.TryNavigateToPosition(waypoint.Position, $"waypoint {waypoint.Name}");
                     return;
                 }
@@ -504,14 +522,15 @@ namespace AccessibilityMod.Navigation
                     TolkScreenReader.Instance.Speak($"No object selected. Select a category first, then use {KeyBindings.SpeakableName(GameKey.CycleForward)} to cycle.", true);
                     return;
                 }
-                
+
                 Vector3 destination = selectedObject.transform.position;
                 string objectName = ObjectNameCleaner.GetBetterObjectName(selectedObject);
-                
+
                 MelonLogger.Msg($"[SMART NAV] Attempting to navigate to {objectName}");
                 TolkScreenReader.Instance.Speak($"Calculating path to {objectName}...", true);
-                
+
                 // Try automated movement
+                lastNavigationTargetWasObject = true;
                 movementController.TryNavigateToPosition(destination, objectName);
             }
             catch (Exception ex)

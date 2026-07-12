@@ -25,6 +25,7 @@ public sealed class MainForm : Form
     private readonly CheckBox speechInterruptCheck;
     private readonly CheckBox speakAudioCaptionsCheck;
     private readonly CheckBox dialogAutoAdvanceCheck;
+    private readonly CheckBox autoInteractCheck;
     private readonly Button saveButton;
     private readonly Label statusLabel;
 
@@ -90,8 +91,9 @@ public sealed class MainForm : Form
         orbAnnouncementsCheck = new CheckBox { Left = 12, Top = 60, Width = 200 };
         speechInterruptCheck = new CheckBox { Left = 230, Top = 60, Width = 220 };
         speakAudioCaptionsCheck = new CheckBox { Left = 460, Top = 60, Width = 210 };
-        dialogAutoAdvanceCheck = new CheckBox { Left = 12, Top = 92, Width = 440 };
-        generalGroup.Controls.AddRange(new Control[] { dialogModeLabel, dialogModeCombo, orbAnnouncementsCheck, speechInterruptCheck, speakAudioCaptionsCheck, dialogAutoAdvanceCheck });
+        dialogAutoAdvanceCheck = new CheckBox { Left = 12, Top = 92, Width = 400 };
+        autoInteractCheck = new CheckBox { Left = 420, Top = 92, Width = 250 };
+        generalGroup.Controls.AddRange(new Control[] { dialogModeLabel, dialogModeCombo, orbAnnouncementsCheck, speechInterruptCheck, speakAudioCaptionsCheck, dialogAutoAdvanceCheck, autoInteractCheck });
 
         saveButton = new Button { Left = 12, Top = 650, Width = 150 };
         saveButton.Click += SaveButton_Click;
@@ -159,6 +161,8 @@ public sealed class MainForm : Form
         speakAudioCaptionsCheck.AccessibleName = Strings.Get("SpeakAudioCaptions");
         dialogAutoAdvanceCheck.Text = Strings.Get("DialogAutoAdvance");
         dialogAutoAdvanceCheck.AccessibleName = Strings.Get("DialogAutoAdvance");
+        autoInteractCheck.Text = Strings.Get("AutoInteract");
+        autoInteractCheck.AccessibleName = Strings.Get("AutoInteract");
         saveButton.Text = Strings.Get("Save");
         statusLabel.AccessibleName = Strings.Get("StatusAccessible");
     }
@@ -191,6 +195,7 @@ public sealed class MainForm : Form
         speechInterruptCheck.Checked = config.SpeechInterrupt;
         speakAudioCaptionsCheck.Checked = config.SpeakAudioCaptions;
         dialogAutoAdvanceCheck.Checked = config.DialogAutoAdvance;
+        autoInteractCheck.Checked = config.AutoInteract;
         SetStatus(File.Exists(ConfigPath) ? Strings.Get("StatusConfigLoaded") : Strings.Get("StatusConfigNotFound"));
     }
 
@@ -337,6 +342,7 @@ public sealed class MainForm : Form
         config.SpeechInterrupt = speechInterruptCheck.Checked;
         config.SpeakAudioCaptions = speakAudioCaptionsCheck.Checked;
         config.DialogAutoAdvance = dialogAutoAdvanceCheck.Checked;
+        config.AutoInteract = autoInteractCheck.Checked;
 
         try
         {

@@ -12,6 +12,7 @@ public sealed class MainForm : Form
     private readonly Button installButton;
     private readonly Button openKeybindEditorButton;
     private readonly CheckBox prereleaseCheck;
+    private readonly CheckBox devBridgeCheck;
     private readonly ListBox logList;
 
     public MainForm()
@@ -42,7 +43,8 @@ public sealed class MainForm : Form
         openKeybindEditorButton = new Button { Left = 220, Top = 85, Width = 200, Height = 32 };
         openKeybindEditorButton.Click += OpenKeybindEditorButton_Click;
 
-        prereleaseCheck = new CheckBox { Left = 430, Top = 90, Width = 190 };
+        prereleaseCheck = new CheckBox { Left = 430, Top = 82, Width = 190 };
+        devBridgeCheck = new CheckBox { Left = 430, Top = 104, Width = 190 };
 
         logList = new ListBox { Left = 12, Top = 130, Width = 603, Height = 300, HorizontalScrollbar = true };
 
@@ -50,7 +52,7 @@ public sealed class MainForm : Form
         {
             languageLabel, languageCombo,
             gamePathLabel, gamePathBox, browseButton,
-            installButton, openKeybindEditorButton, prereleaseCheck,
+            installButton, openKeybindEditorButton, prereleaseCheck, devBridgeCheck,
             logList,
         });
 
@@ -84,6 +86,8 @@ public sealed class MainForm : Form
         openKeybindEditorButton.Text = Strings.Get("OpenKeybindEditor");
         prereleaseCheck.Text = Strings.Get("PrereleaseCheck");
         prereleaseCheck.AccessibleName = Strings.Get("PrereleaseCheck");
+        devBridgeCheck.Text = Strings.Get("DevBridgeCheck");
+        devBridgeCheck.AccessibleName = Strings.Get("DevBridgeCheck");
         logList.AccessibleName = Strings.Get("LogAccessible");
     }
 
@@ -131,6 +135,9 @@ public sealed class MainForm : Form
             var tag = await ModInstaller.InstallLatestAsync(gamePath, Log, includePrerelease: prereleaseCheck.Checked);
             Log($"[{tag}] " + Strings.Get("StepDone"));
 
+            var bridgeResult = ModInstaller.SetDevBridgeEnabled(gamePath, devBridgeCheck.Checked);
+            LogDevBridgeResult(bridgeResult);
+
             CreateStartMenuShortcut(gamePath);
 
             Tolk.Speak(Strings.Get("InstallCompleteDialog"));
@@ -170,6 +177,23 @@ public sealed class MainForm : Form
             Arguments = args,
             WorkingDirectory = Path.GetDirectoryName(exe),
         });
+    }
+
+    private void LogDevBridgeResult(ModInstaller.DevBridgeResult result)
+    {
+        switch (result)
+        {
+            case ModInstaller.DevBridgeResult.Installed:
+                Log(Strings.Get("StepDevBridgeInstalled"));
+                break;
+            case ModInstaller.DevBridgeResult.Removed:
+                Log(Strings.Get("StepDevBridgeRemoved"));
+                break;
+            case ModInstaller.DevBridgeResult.SourceMissing:
+                Log(Strings.Get("StepDevBridgeMissing"));
+                break;
+            // Absent: bridge neither requested nor present - nothing worth logging
+        }
     }
 
     private void CreateStartMenuShortcut(string gamePath)

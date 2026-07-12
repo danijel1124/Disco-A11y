@@ -18,6 +18,35 @@ public static class ModInstaller
     public static bool IsGameRunning() =>
         System.Diagnostics.Process.GetProcessesByName("disco").Length > 0;
 
+    public enum DevBridgeResult { Installed, Removed, Absent, SourceMissing }
+
+    /// <summary>
+    /// Installs or removes the AI dev bridge companion mod (DevBridge.dll, shipped in
+    /// the tools bundle next to this installer, never in the mod release zip). Enable
+    /// copies it into Mods/; disable deletes it from there so toggling the checkbox
+    /// off on a reinstall cleanly de-activates the bridge.
+    /// </summary>
+    public static DevBridgeResult SetDevBridgeEnabled(string gamePath, bool enable)
+    {
+        var source = Path.Combine(AppContext.BaseDirectory, "DevBridge.dll");
+        var dest = Path.Combine(gamePath, "Mods", "DevBridge.dll");
+
+        if (enable)
+        {
+            if (!File.Exists(source)) return DevBridgeResult.SourceMissing;
+            Directory.CreateDirectory(Path.Combine(gamePath, "Mods"));
+            File.Copy(source, dest, overwrite: true);
+            return DevBridgeResult.Installed;
+        }
+
+        if (File.Exists(dest))
+        {
+            File.Delete(dest);
+            return DevBridgeResult.Removed;
+        }
+        return DevBridgeResult.Absent;
+    }
+
     public static async Task<string> InstallLatestAsync(
         string gamePath,
         Action<string>? statusCallback = null,

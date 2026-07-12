@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>DiscoElysiumKeybindEditor</AssemblyName>
+    <AssemblyName>DiscoElysiumModConfigurator</AssemblyName>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RollForward>Major</RollForward>
   </PropertyGroup>
