@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
 
 namespace AccessibilityMod.Settings
 {
@@ -11,6 +12,11 @@ namespace AccessibilityMod.Settings
     /// </summary>
     public static class Loc
     {
+        // Unity's Il2Cpp domain reports an invariant/en CurrentUICulture regardless of
+        // the OS language (verified in-game), so "auto" asks Windows directly.
+        [DllImport("kernel32.dll")]
+        private static extern ushort GetUserDefaultUILanguage();
+
         public static bool IsGerman
         {
             get
@@ -18,7 +24,14 @@ namespace AccessibilityMod.Settings
                 var setting = AccessibilityPreferences.GetLanguage();
                 if (setting == "de") return true;
                 if (setting == "en") return false;
-                return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "de";
+                try
+                {
+                    return (GetUserDefaultUILanguage() & 0x3FF) == 0x07; // LANG_GERMAN
+                }
+                catch
+                {
+                    return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "de";
+                }
             }
         }
 

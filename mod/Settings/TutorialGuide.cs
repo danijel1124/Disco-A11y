@@ -16,6 +16,7 @@ namespace AccessibilityMod.Settings
         private static MelonPreferences_Entry<string> seenEntry;
         private static readonly HashSet<string> seen = new();
         private static float lastPoll;
+        private static int lastLineCounter;
 
         public static void Initialize()
         {
@@ -40,7 +41,12 @@ namespace AccessibilityMod.Settings
 
             try
             {
-                if (UI.DialogStateManager.IsInConversation()
+                // A freshly rendered dialogue line is the reliable "conversation is
+                // happening" signal - DialogStateManager's isInConversation flag misses
+                // some flows (verified: the intro dialogue leaves it false).
+                bool dialogueActive = Patches.DialogSystemPatches.LineCounter != lastLineCounter;
+                lastLineCounter = Patches.DialogSystemPatches.LineCounter;
+                if (dialogueActive
                     && UI.DialogStateManager.CurrentDialogMode == UI.DialogReadingMode.Disabled)
                 {
                     Show("Conversation", () => Loc.Get("Tip_Conversation",

@@ -19,10 +19,22 @@ namespace AccessibilityMod.Utils
         private const float PLAYER_SNAP_RADIUS = 2.0f;
         private const float TARGET_SNAP_RADIUS = 3.0f;
 
+        // Interactables count as reachable when auto-walk can get within interaction
+        // range, not only when the NavMesh path ends exactly at them. Doors and wall
+        // objects snap to the far side of walls, which made a strict PathComplete check
+        // flag doors one metre away as unreachable (observed in the Whirling).
+        private const float CLOSE_ENOUGH = 3.0f;
+
         public static bool? IsReachable(Vector3 playerPos, Vector3 targetPos)
         {
             try
             {
+                // Anything already within interaction range is reachable by definition.
+                if (Vector3.Distance(playerPos, targetPos) <= CLOSE_ENOUGH)
+                {
+                    return true;
+                }
+
                 if (!NavMesh.SamplePosition(playerPos, out var playerHit, PLAYER_SNAP_RADIUS, NavMesh.AllAreas))
                 {
                     return null;
@@ -39,7 +51,21 @@ namespace AccessibilityMod.Utils
                     return false;
                 }
 
-                return path.status == NavMeshPathStatus.PathComplete;
+                if (path.status == NavMeshPathStatus.PathComplete)
+                {
+                    return true;
+                }
+
+                // Partial path: reachable if it ends close enough to the target for
+                // interaction (typical for objects whose NavMesh sample landed on the
+                // wrong side of a wall).
+                var corners = path.corners;
+                if (corners != null && corners.Length > 0)
+                {
+                    return Vector3.Distance(corners[corners.Length - 1], targetPos) <= CLOSE_ENOUGH;
+                }
+
+                return false;
             }
             catch (Exception)
             {

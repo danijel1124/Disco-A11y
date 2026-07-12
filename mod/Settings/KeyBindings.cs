@@ -216,7 +216,9 @@ namespace AccessibilityMod.Settings
         public static string SpeakableName(GameKey action)
         {
             var described = Get(action).Describe().Replace("+", " plus ");
-            return System.Text.RegularExpressions.Regex.Replace(described, "(?<=[a-z0-9])(?=[A-Z0-9])", " ");
+            // Split lower->upper and digit->letter boundaries but never digit->digit,
+            // otherwise F12 becomes "F1 2".
+            return System.Text.RegularExpressions.Regex.Replace(described, "(?<=[a-z])(?=[A-Z0-9])|(?<=[0-9])(?=[A-Z])", " ");
         }
 
         public static void Set(GameKey action, KeyBinding binding)

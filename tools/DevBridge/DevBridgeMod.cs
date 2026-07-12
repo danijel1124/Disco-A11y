@@ -64,12 +64,22 @@ namespace DevBridge
             MelonLogger.Msg($"[BRIDGE] Ready - command channel: {Path.GetFullPath(commandPath)}");
         }
 
+        private static string lastSpokenText;
+        private static DateTime lastSpokenAt;
+
         private static void SpeakPostfix(string text)
         {
             if (string.IsNullOrWhiteSpace(text)) return;
             lock (spokenHistory)
             {
-                spokenHistory.Add($"{DateTime.Now:HH:mm:ss.fff} {text}");
+                // Queued announcements pass through Speak twice (once on enqueue, once
+                // when the audio-aware queue actually plays them) - collapse the pair.
+                var now = DateTime.Now;
+                if (text == lastSpokenText && (now - lastSpokenAt).TotalSeconds < 2) return;
+                lastSpokenText = text;
+                lastSpokenAt = now;
+
+                spokenHistory.Add($"{now:HH:mm:ss.fff} {text}");
                 if (spokenHistory.Count > SPOKEN_HISTORY_MAX) spokenHistory.RemoveAt(0);
             }
         }
@@ -233,6 +243,47 @@ namespace DevBridge
                 case "announce":
                     if (nav == null) return "navigation system not ready";
                     return nav.GetNavigationInfo().FormatAnnouncement();
+
+                case "ui":
+                {
+                    // ui selected | ui down|up|left|right | ui submit - drives the real
+                    // Unity EventSystem selection, which is how the game's own menus
+                    // (non-Button custom controls) are keyboard-navigated.
+                    var es = UnityEngine.EventSystems.EventSystem.current;
+                    if (es == null) return "no EventSystem";
+                    if (parts.Length < 2) return "usage: ui selected|down|up|left|right|submit|cancel";
+                    var sel = es.currentSelectedGameObject;
+                    if (parts[1] == "selected") return sel == null ? "(nothing selected)" : sel.name;
+                    if (sel == null) return "(nothing selected)";
+
+                    if (parts[1] == "submit")
+                    {
+                        UnityEngine.EventSystems.ExecuteEvents.Execute(sel,
+                            new UnityEngine.EventSystems.BaseEventData(es),
+                            UnityEngine.EventSystems.ExecuteEvents.submitHandler);
+                        return $"submit on {sel.name}";
+                    }
+                    if (parts[1] == "cancel")
+                    {
+                        UnityEngine.EventSystems.ExecuteEvents.Execute(sel,
+                            new UnityEngine.EventSystems.BaseEventData(es),
+                            UnityEngine.EventSystems.ExecuteEvents.cancelHandler);
+                        return $"cancel on {sel.name}";
+                    }
+
+                    var dir = parts[1] switch
+                    {
+                        "up" => UnityEngine.EventSystems.MoveDirection.Up,
+                        "left" => UnityEngine.EventSystems.MoveDirection.Left,
+                        "right" => UnityEngine.EventSystems.MoveDirection.Right,
+                        _ => UnityEngine.EventSystems.MoveDirection.Down,
+                    };
+                    var move = new UnityEngine.EventSystems.AxisEventData(es) { moveDir = dir };
+                    UnityEngine.EventSystems.ExecuteEvents.Execute(sel, move,
+                        UnityEngine.EventSystems.ExecuteEvents.moveHandler);
+                    var now = es.currentSelectedGameObject;
+                    return $"moved {parts[1]}; selected: {(now == null ? "(none)" : now.name)}";
+                }
 
                 case "buttons":
                 {
