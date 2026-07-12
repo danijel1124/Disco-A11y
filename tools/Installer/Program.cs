@@ -12,7 +12,8 @@ internal static class Program
             // silently discard the path in favor of auto-detection.
             var gamePathArg = args.Skip(1).FirstOrDefault(a => !a.StartsWith("--"));
             var force = args.Contains("--force");
-            RunCli(gamePathArg, force).GetAwaiter().GetResult();
+            var prerelease = args.Contains("--prerelease");
+            RunCli(gamePathArg, force, prerelease).GetAwaiter().GetResult();
             return;
         }
 
@@ -21,12 +22,13 @@ internal static class Program
     }
 
     /// <summary>
-    /// Non-interactive install: DiscoElysiumInstaller.exe --cli [gamePath] [--force]
+    /// Non-interactive install: DiscoElysiumInstaller.exe --cli [gamePath] [--force] [--prerelease]
     /// Installs/updates MelonLoader (skipped if already present, unless --force) and the
     /// mod itself, printing progress to the console. Auto-detects the game folder via
-    /// Steam if gamePath is omitted.
+    /// Steam if gamePath is omitted. --prerelease installs the newest release including
+    /// prereleases (the nightly channel) instead of the latest stable.
     /// </summary>
-    private static async Task RunCli(string? gamePathOverride, bool force)
+    private static async Task RunCli(string? gamePathOverride, bool force, bool includePrerelease)
     {
         void Log(string s) => Console.WriteLine(s);
 
@@ -52,7 +54,7 @@ internal static class Program
                 Log("MelonLoader installed.");
             }
 
-            var tag = await ModInstaller.InstallLatestAsync(gamePath, Log);
+            var tag = await ModInstaller.InstallLatestAsync(gamePath, Log, includePrerelease);
             Log($"Mod installed (release {tag}).");
 
             var exe = KeybindEditorLocator.Find();

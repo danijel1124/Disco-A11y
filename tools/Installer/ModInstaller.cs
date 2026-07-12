@@ -14,23 +14,59 @@ public static class ModInstaller
     public const string DefaultOwner = "danijel1124";
     public const string DefaultRepo = "Disco-A11y";
 
+    /// <summary>True while the game itself is running - its loaded DLLs are locked, so installing would fail halfway.</summary>
+    public static bool IsGameRunning() =>
+        System.Diagnostics.Process.GetProcessesByName("disco").Length > 0;
+
     public static async Task<string> InstallLatestAsync(
         string gamePath,
         Action<string>? statusCallback = null,
+        bool includePrerelease = false,
         string owner = DefaultOwner,
         string repo = DefaultRepo
     )
     {
+        if (IsGameRunning())
+        {
+            throw new Exception(Strings.Get("GameRunningError"));
+        }
+
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("DiscoElysiumInstaller/1.0");
         httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
-        var releaseUrl = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
+        // /releases/latest never returns prereleases, so the nightly channel has to
+        // walk the full release list (newest first) and take the first non-draft entry.
+        var releaseUrl = includePrerelease
+            ? $"https://api.github.com/repos/{owner}/{repo}/releases?per_page=10"
+            : $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
         using var releaseResponse = await httpClient.GetAsync(releaseUrl);
         releaseResponse.EnsureSuccessStatusCode();
 
         using var releaseDoc = JsonDocument.Parse(await releaseResponse.Content.ReadAsStreamAsync());
-        var root = releaseDoc.RootElement;
+        JsonElement root;
+        if (includePrerelease)
+        {
+            root = default;
+            var found = false;
+            foreach (var candidate in releaseDoc.RootElement.EnumerateArray())
+            {
+                if (!candidate.GetProperty("draft").GetBoolean())
+                {
+                    root = candidate;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                throw new Exception($"No published release found on {owner}/{repo}.");
+            }
+        }
+        else
+        {
+            root = releaseDoc.RootElement;
+        }
         var tag = root.GetProperty("tag_name").GetString() ?? "unknown";
 
         // Releases can carry more than one zip (the mod itself plus a tools bundle), so

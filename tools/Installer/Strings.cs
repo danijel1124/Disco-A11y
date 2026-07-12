@@ -22,6 +22,7 @@ public static class Strings
         ["BrowseDialogTitle"] = ("Select the Disco Elysium game folder", "Disco-Elysium-Spielordner auswählen"),
         ["Install"] = ("Install / Update", "Installieren / Aktualisieren"),
         ["OpenKeybindEditor"] = ("Open Keybind Editor", "Tastenbelegung öffnen"),
+        ["PrereleaseCheck"] = ("Install latest prerelease (nightly)", "Aktuellstes Prerelease laden (Nightly)"),
         ["LogAccessible"] = ("Installation log", "Installationsprotokoll"),
 
         ["StatusGamePathMissing"] = ("Game folder not found. Please use 'Browse...' to select it.", "Spielordner nicht gefunden. Bitte über 'Durchsuchen...' auswählen."),
@@ -43,6 +44,8 @@ public static class Strings
         ["DialogTitle"] = ("Disco Elysium Accessibility Mod", "Disco Elysium Accessibility Mod"),
         ["InstallCompleteDialog"] = ("Installation complete. Launch the game to use the mod.", "Installation abgeschlossen. Starte das Spiel, um den Mod zu nutzen."),
         ["InstallErrorDialog"] = ("Installation failed: {0}", "Installation fehlgeschlagen: {0}"),
+
+        ["GameRunningError"] = ("Disco Elysium is currently running - please close the game first, then install again.", "Disco Elysium läuft gerade - bitte zuerst das Spiel beenden und dann erneut installieren."),
 
         ["ReinstallPromptTitle"] = ("MelonLoader already installed", "MelonLoader bereits installiert"),
         ["ReinstallPromptText"] = ("MelonLoader is already installed. Reinstall it anyway?", "MelonLoader ist bereits installiert. Trotzdem neu installieren?"),

@@ -11,6 +11,7 @@ public sealed class MainForm : Form
     private readonly Button browseButton;
     private readonly Button installButton;
     private readonly Button openKeybindEditorButton;
+    private readonly CheckBox prereleaseCheck;
     private readonly ListBox logList;
 
     public MainForm()
@@ -41,13 +42,15 @@ public sealed class MainForm : Form
         openKeybindEditorButton = new Button { Left = 220, Top = 85, Width = 200, Height = 32 };
         openKeybindEditorButton.Click += OpenKeybindEditorButton_Click;
 
+        prereleaseCheck = new CheckBox { Left = 430, Top = 90, Width = 190 };
+
         logList = new ListBox { Left = 12, Top = 130, Width = 603, Height = 300, HorizontalScrollbar = true };
 
         Controls.AddRange(new Control[]
         {
             languageLabel, languageCombo,
             gamePathLabel, gamePathBox, browseButton,
-            installButton, openKeybindEditorButton,
+            installButton, openKeybindEditorButton, prereleaseCheck,
             logList,
         });
 
@@ -79,6 +82,8 @@ public sealed class MainForm : Form
         browseButton.Text = Strings.Get("Browse");
         installButton.Text = Strings.Get("Install");
         openKeybindEditorButton.Text = Strings.Get("OpenKeybindEditor");
+        prereleaseCheck.Text = Strings.Get("PrereleaseCheck");
+        prereleaseCheck.AccessibleName = Strings.Get("PrereleaseCheck");
         logList.AccessibleName = Strings.Get("LogAccessible");
     }
 
@@ -123,7 +128,7 @@ public sealed class MainForm : Form
                 Log(Strings.Get("StepMelonLoaderDone"));
             }
 
-            var tag = await ModInstaller.InstallLatestAsync(gamePath, Log);
+            var tag = await ModInstaller.InstallLatestAsync(gamePath, Log, includePrerelease: prereleaseCheck.Checked);
             Log($"[{tag}] " + Strings.Get("StepDone"));
 
             CreateStartMenuShortcut(gamePath);
