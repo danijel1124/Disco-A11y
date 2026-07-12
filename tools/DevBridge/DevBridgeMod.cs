@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
@@ -25,13 +29,21 @@ namespace DevBridge
     /// keyboard/screen access. NOT part of the mod release zip - installed only via the
     /// installer's "Enable AI dev bridge" option or a local build.
     ///
-    /// Protocol: write one command line to UserData/DevBridge/command.txt; the bridge
-    /// polls a few times per second, executes, deletes the file, and writes the full
-    /// result to UserData/DevBridge/response.txt. Send "help" for the command list.
+    /// Protocol (two transports, same commands - send "help" for the list):
+    ///  - File: write one command line to UserData/DevBridge/command.txt; the bridge
+    ///    polls a few times per second, executes, deletes the file, and writes the full
+    ///    result to UserData/DevBridge/response.txt.
+    ///  - Socket: TCP on 127.0.0.1, port in UserData/DevBridge/port.txt. One command
+    ///    per line; the response is written back terminated by a line "&lt;&lt;END&gt;&gt;".
+    ///    Commands run on the next frame, so latency is one frame instead of up to the
+    ///    file poll interval - and the socket also PUSHES events without being asked:
+    ///    lines starting with "! " (spoken text, dialogue started/ended, scene loads).
     /// </summary>
     public class DevBridgeMod : MelonMod
     {
         private const float POLL_INTERVAL = 0.2f;
+        private const int PREFERRED_PORT = 48610;
+        private const string RESPONSE_END = "<<END>>";
 
         private static readonly List<string> spokenHistory = new();
         private const int SPOKEN_HISTORY_MAX = 100;
@@ -40,6 +52,15 @@ namespace DevBridge
         private string commandPath;
         private string responsePath;
         private float lastPoll;
+
+        // Socket transport. Accept/read run on background threads that only touch
+        // sockets and strings (never Il2Cpp objects); commands are queued and executed
+        // on the Unity main thread in OnUpdate, which also does all writing.
+        private static TcpListener listener;
+        private static volatile bool listenerRunning;
+        private static readonly List<StreamWriter> socketClients = new();
+        private static readonly ConcurrentQueue<(string Command, StreamWriter Client)> pendingSocketCommands = new();
+        private bool lastDialogUiActive;
 
         public override void OnInitializeMelon()
         {
@@ -60,8 +81,123 @@ namespace DevBridge
                 MelonLogger.Warning($"[BRIDGE] Could not hook speech output: {ex.Message}");
             }
 
+            StartSocketServer();
+
             File.WriteAllText(Path.Combine(bridgeDir, "status.txt"), $"DevBridge ready {DateTime.Now:O}\n");
             MelonLogger.Msg($"[BRIDGE] Ready - command channel: {Path.GetFullPath(commandPath)}");
+        }
+
+        private void StartSocketServer()
+        {
+            try
+            {
+                try
+                {
+                    listener = new TcpListener(IPAddress.Loopback, PREFERRED_PORT);
+                    listener.Start();
+                }
+                catch (SocketException)
+                {
+                    // Preferred port taken (second game instance / zombie) - let the OS pick.
+                    listener = new TcpListener(IPAddress.Loopback, 0);
+                    listener.Start();
+                }
+                int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                File.WriteAllText(Path.Combine(bridgeDir, "port.txt"), port.ToString());
+                listenerRunning = true;
+
+                var acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "DevBridgeAccept" };
+                acceptThread.Start();
+                MelonLogger.Msg($"[BRIDGE] Socket listening on 127.0.0.1:{port}");
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Warning($"[BRIDGE] Socket transport unavailable ({ex.Message}) - file channel still works");
+            }
+        }
+
+        private static void AcceptLoop()
+        {
+            while (listenerRunning)
+            {
+                TcpClient client;
+                try
+                {
+                    client = listener.AcceptTcpClient();
+                }
+                catch
+                {
+                    return; // listener stopped
+                }
+
+                try
+                {
+                    client.NoDelay = true;
+                    var stream = client.GetStream();
+                    var writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
+                    lock (socketClients) socketClients.Add(writer);
+
+                    var readerThread = new Thread(() => ReadLoop(client, writer)) { IsBackground = true, Name = "DevBridgeRead" };
+                    readerThread.Start();
+                }
+                catch { /* client vanished during handshake */ }
+            }
+        }
+
+        private static void ReadLoop(TcpClient client, StreamWriter writer)
+        {
+            try
+            {
+                using var reader = new StreamReader(client.GetStream(), Encoding.UTF8);
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    line = line.Trim();
+                    if (line.Length > 0) pendingSocketCommands.Enqueue((line, writer));
+                }
+            }
+            catch { /* disconnect */ }
+            finally
+            {
+                lock (socketClients) socketClients.Remove(writer);
+                try { client.Close(); } catch { }
+            }
+        }
+
+        /// <summary>Push one "! "-prefixed event line to every connected socket client. Main thread only.</summary>
+        private static void BroadcastEvent(string text)
+        {
+            lock (socketClients)
+            {
+                if (socketClients.Count == 0) return;
+                for (int i = socketClients.Count - 1; i >= 0; i--)
+                {
+                    try
+                    {
+                        socketClients[i].WriteLine("! " + text);
+                    }
+                    catch
+                    {
+                        socketClients.RemoveAt(i);
+                    }
+                }
+            }
+        }
+
+        public override void OnDeinitializeMelon()
+        {
+            listenerRunning = false;
+            try { listener?.Stop(); } catch { }
+            lock (socketClients)
+            {
+                foreach (var c in socketClients) { try { c.Dispose(); } catch { } }
+                socketClients.Clear();
+            }
+        }
+
+        public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+        {
+            BroadcastEvent($"scene {sceneName}");
         }
 
         private static string lastSpokenText;
@@ -82,10 +218,47 @@ namespace DevBridge
                 spokenHistory.Add($"{now:HH:mm:ss.fff} {text}");
                 if (spokenHistory.Count > SPOKEN_HISTORY_MAX) spokenHistory.RemoveAt(0);
             }
+            BroadcastEvent($"spoken {text}");
         }
 
         public override void OnUpdate()
         {
+            // Socket commands run every frame (that's the transport's latency win);
+            // all socket writing stays on this main thread.
+            while (pendingSocketCommands.TryDequeue(out var entry))
+            {
+                MelonLogger.Msg($"[BRIDGE] Socket command: {entry.Command}");
+                string response;
+                try
+                {
+                    response = Execute(entry.Command);
+                }
+                catch (Exception ex)
+                {
+                    response = $"ERROR: {ex}";
+                }
+                try
+                {
+                    entry.Client.WriteLine(response);
+                    entry.Client.WriteLine(RESPONSE_END);
+                }
+                catch
+                {
+                    lock (socketClients) socketClients.Remove(entry.Client);
+                }
+            }
+
+            try
+            {
+                bool dialogActive = DialogStateManager.IsDialogUiActive;
+                if (dialogActive != lastDialogUiActive)
+                {
+                    lastDialogUiActive = dialogActive;
+                    BroadcastEvent(dialogActive ? "dialog active" : "dialog inactive");
+                }
+            }
+            catch { /* mod not ready yet */ }
+
             if (Time.unscaledTime - lastPoll < POLL_INTERVAL) return;
             lastPoll = Time.unscaledTime;
 
@@ -136,11 +309,15 @@ namespace DevBridge
                 case "help":
                     return "Commands:\n" +
                            "state | objects [maxCount] | spoken [count] | screenshot [file]\n" +
+                           "screen (all visible on-screen text - compare against 'spoken' to find silent UI)\n" +
+                           "key <i|t|j|c|m|f1|escape|...> (real keypress: game's own menu keys)\n" +
                            "select npcs|locations|loot|all | cycle [back] | category next|prev\n" +
                            "navigate | interact | stop | announce\n" +
                            "dialog | continue\n" +
                            "teleport <x> <y> <z> | quickload | devmode\n" +
-                           "readingmode off|full|speaker | set autoread|autointeract|captions on|off";
+                           "readingmode off|full|speaker | set autoread|autointeract|captions on|off\n" +
+                           "Transports: this file channel, or TCP 127.0.0.1 (port in UserData/DevBridge/port.txt);\n" +
+                           "socket: one command per line, response ends with <<END>>, push events start with '! '";
 
                 case "state":
                 {
@@ -286,6 +463,38 @@ namespace DevBridge
                     return $"moved {parts[1]}; selected: {(now == null ? "(none)" : now.name)}";
                 }
 
+                case "screen":
+                {
+                    // Accessibility audit tool: dump every piece of text actually visible
+                    // on screen. Comparing this against "spoken" shows exactly what a
+                    // sighted player can read but a blind player never hears - the gaps
+                    // a blind user cannot report themselves.
+                    var sb = new StringBuilder();
+                    int shown = 0;
+                    foreach (var t in UnityEngine.Object.FindObjectsOfType<Il2CppTMPro.TextMeshProUGUI>())
+                    {
+                        if (t == null || !t.gameObject.activeInHierarchy) continue;
+                        if (string.IsNullOrWhiteSpace(t.text)) continue;
+                        // Fully transparent text is present in the hierarchy but not readable.
+                        if (t.color.a < 0.05f) continue;
+
+                        sb.AppendLine($"[{t.transform.parent?.name ?? "?"}] {t.text.Replace("\n", " / ").Trim()}");
+                        if (++shown >= 120) { sb.AppendLine("... (truncated)"); break; }
+                    }
+                    return shown == 0 ? "(no visible text)" : sb.ToString().TrimEnd();
+                }
+
+                case "key":
+                {
+                    // Presses a real keyboard key at OS level, so the game's own input
+                    // system sees it exactly like a player's keypress (Unity's Input is
+                    // read-only, and the game's menus are driven by its own bindings:
+                    // i=inventory, t=thought cabinet, j=journal, c=character sheet, m=map).
+                    if (parts.Length < 2) return "usage: key <i|t|j|c|m|f1|escape|tab|space|...>";
+                    if (!TryPressKey(parts[1], out var error)) return error;
+                    return $"pressed {parts[1]}";
+                }
+
                 case "buttons":
                 {
                     var sb = new StringBuilder();
@@ -397,6 +606,42 @@ namespace DevBridge
                 default:
                     return $"unknown command '{verb}' - send 'help' for the list";
             }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern void keybd_event(byte vk, byte scan, uint flags, System.UIntPtr extra);
+
+        private const uint KEYEVENTF_KEYUP = 0x0002;
+
+        private static readonly Dictionary<string, byte> VirtualKeys = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["escape"] = 0x1B, ["tab"] = 0x09, ["space"] = 0x20, ["return"] = 0x0D, ["enter"] = 0x0D,
+            ["up"] = 0x26, ["down"] = 0x28, ["left"] = 0x25, ["right"] = 0x27,
+            ["f1"] = 0x70, ["f5"] = 0x74, ["f9"] = 0x78,
+        };
+
+        /// <summary>Presses a key at OS level (the game reads real OS input, which Unity's Input API cannot fake).</summary>
+        private static bool TryPressKey(string name, out string error)
+        {
+            error = null;
+            byte vk;
+            if (VirtualKeys.TryGetValue(name, out var mapped))
+            {
+                vk = mapped;
+            }
+            else if (name.Length == 1 && char.IsLetterOrDigit(name[0]))
+            {
+                vk = (byte)char.ToUpperInvariant(name[0]); // VK codes for A-Z / 0-9 equal their ASCII value
+            }
+            else
+            {
+                error = $"unknown key '{name}' - use a letter, a digit, or one of: {string.Join(", ", VirtualKeys.Keys)}";
+                return false;
+            }
+
+            keybd_event(vk, 0, 0, System.UIntPtr.Zero);
+            keybd_event(vk, 0, KEYEVENTF_KEYUP, System.UIntPtr.Zero);
+            return true;
         }
 
         private static string LastSpoken()

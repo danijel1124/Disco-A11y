@@ -55,6 +55,21 @@ namespace AccessibilityMod.Settings
             ["Tip_Arrival"] = (
                 "Tip: you have arrived. Press {0} to interact with the object. {1} makes this happen automatically from now on.",
                 "Tipp: Du bist angekommen. Drücke {0}, um mit dem Objekt zu interagieren. {1} erledigt das künftig automatisch."),
+            ["DoorLocked"] = (
+                "{0} is locked.",
+                "{0} ist verschlossen."),
+            ["ContainerOpened"] = (
+                "Container opened: {0}. Press {1} to take everything, Escape to close.",
+                "Container geöffnet: {0}. Drücke {1}, um alles zu nehmen, Escape zum Schließen."),
+            ["ContainerEmpty"] = (
+                "empty",
+                "leer"),
+            ["ContainerTakeAll"] = (
+                "Taking everything.",
+                "Nehme alles."),
+            ["ContainerClosed"] = (
+                "Container closed.",
+                "Container geschlossen."),
         };
 
         public static string Get(string key) =>

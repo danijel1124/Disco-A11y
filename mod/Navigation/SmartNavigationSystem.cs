@@ -449,6 +449,13 @@ namespace AccessibilityMod.Navigation
                 return;
             }
 
+            // While a world-container panel is open, the interact key operates the
+            // panel instead of the world: it takes everything (or closes an empty box).
+            if (Patches.ContainerPatches.TakeAllFromOpenContainer())
+            {
+                return;
+            }
+
             if (currentFocus == NavigationFocus.Waypoints)
             {
                 TolkScreenReader.Instance.Speak($"Waypoints are positions, not objects. Press {KeyBindings.SpeakableName(GameKey.NavigateToSelected)} to walk there instead.", true);
@@ -474,9 +481,25 @@ namespace AccessibilityMod.Navigation
                     return;
                 }
 
+                // Locked doors accept the click but the game reacts with nothing at all
+                // (no dialogue, no panel - verified live), so say why before it goes quiet.
+                // The click still runs in case this particular door does trigger a bark.
+                bool locked = false;
+                try
+                {
+                    var door = selectedObject.GetComponentInParent<Door>();
+                    locked = door != null && door._isLocked;
+                }
+                catch { /* not a door / component gone - normal interaction continues */ }
+
+                if (locked)
+                {
+                    TolkScreenReader.Instance.Speak(Loc.Get("DoorLocked", objectName), true);
+                }
+
                 bool interacted = selectedObject.InteractFirstActive(new Interactable.ClickEventData());
                 MelonLogger.Msg($"[SMART NAV] InteractFirstActive on {objectName}: {interacted}");
-                if (!interacted)
+                if (!interacted && !locked)
                 {
                     TolkScreenReader.Instance.Speak($"Cannot interact with {objectName} right now.", true);
                 }
