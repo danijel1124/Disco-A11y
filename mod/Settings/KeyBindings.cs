@@ -100,44 +100,46 @@ namespace AccessibilityMod.Settings
         };
 
         /// <summary>
-        /// Layout-independent alternative: moves every punctuation-bound action onto the
-        /// numeric keypad, whose physical layout does not change between keyboard layouts
-        /// (unlike '[', ']', '\', ';', '\'', '=', which move or require AltGr outside US
-        /// layouts). Letter/digit bindings (R, H, X, O, N, K, Alpha0/8/9) are already
-        /// layout-safe and are left unchanged. Where stardew-access
-        /// (github.com/stardew-access/stardew-access, docs/keybindings.md) has an
-        /// equivalent action, this preset reuses its convention instead of the numpad, since
-        /// those keys (Escape, Page Up/Down, Ctrl+Home) are both layout-safe *and* already
-        /// familiar to players of that mod, and also work on keyboards without a numpad.
+        /// Layout-independent preset for keyboards WITH a numpad. Rebuilt after checking
+        /// the game's own live keyboard bindings (see GameKeybindConflictChecker):
+        /// Keypad1-9 pick dialogue options during conversations (DialogueShortKeys), so
+        /// only collision-free numpad keys remain here (Keypad0, KeypadDivide); the
+        /// category/scan actions live on free F-keys instead (F1=help, F5=quicksave,
+        /// F9=quickload belong to the game). Waypoint actions are Ctrl/Alt variants of
+        /// their category keys. StopMovement is Space - the game's own stop key, so mod
+        /// and game stop consistently together. Cycle/navigate keep stardew-access's
+        /// conventions (Page Up/Down, Ctrl+Home). Letter keys (R, H, X, O, N, K, Alpha0)
+        /// stay on the upstream defaults; ToggleSpeechInterrupt moved off Alpha8 because
+        /// plain 8 also picks dialogue option 8.
         /// </summary>
         public static IReadOnlyDictionary<GameKey, KeyBinding> NumpadSafePreset { get; } = new Dictionary<GameKey, KeyBinding>
         {
-            [GameKey.AnnounceCurrentSelection] = new KeyBinding(KeyCode.Keypad6),
-            [GameKey.ToggleSortingMode] = new KeyBinding(KeyCode.Keypad7),
-            [GameKey.ScanSceneByDistance] = new KeyBinding(KeyCode.Keypad8),
+            [GameKey.AnnounceCurrentSelection] = new KeyBinding(KeyCode.F6),
+            [GameKey.ToggleSortingMode] = new KeyBinding(KeyCode.F7),
+            [GameKey.ScanSceneByDistance] = new KeyBinding(KeyCode.F8),
 
-            [GameKey.SelectNpcs] = new KeyBinding(KeyCode.Keypad1),
-            [GameKey.SelectLocations] = new KeyBinding(KeyCode.Keypad2),
-            [GameKey.SelectLoot] = new KeyBinding(KeyCode.Keypad3),
+            [GameKey.SelectNpcs] = new KeyBinding(KeyCode.F2),
+            [GameKey.SelectLocations] = new KeyBinding(KeyCode.F3),
+            [GameKey.SelectLoot] = new KeyBinding(KeyCode.F4),
             [GameKey.SelectEverything] = new KeyBinding(KeyCode.Keypad0),
 
-            [GameKey.FocusWaypoints] = new KeyBinding(KeyCode.Keypad1, requireCtrl: true),
-            [GameKey.CreateWaypoint] = new KeyBinding(KeyCode.Keypad1, requireAlt: true),
-            [GameKey.DeleteWaypoint] = new KeyBinding(KeyCode.Keypad2, requireAlt: true),
+            [GameKey.FocusWaypoints] = new KeyBinding(KeyCode.F2, requireCtrl: true),
+            [GameKey.CreateWaypoint] = new KeyBinding(KeyCode.F2, requireAlt: true),
+            [GameKey.DeleteWaypoint] = new KeyBinding(KeyCode.F3, requireAlt: true),
 
             // stardew-access: pageDown/pageUp = next/previous object.
             [GameKey.CycleForward] = new KeyBinding(KeyCode.PageDown),
             [GameKey.CycleBackward] = new KeyBinding(KeyCode.PageUp),
             // stardew-access: left ctrl + home = move to selected object.
             [GameKey.NavigateToSelected] = new KeyBinding(KeyCode.Home, requireCtrl: true),
-            // stardew-access: esc = stop walking to a selected tile/object.
-            [GameKey.StopMovement] = new KeyBinding(KeyCode.Escape),
+            // Space is the game's own built-in stop key.
+            [GameKey.StopMovement] = new KeyBinding(KeyCode.Space),
 
-            [GameKey.ToggleDialogReading] = new KeyBinding(KeyCode.KeypadMinus),
+            [GameKey.ToggleDialogReading] = new KeyBinding(KeyCode.KeypadDivide),
             [GameKey.RepeatDialogue] = new KeyBinding(KeyCode.R),
             [GameKey.ToggleOrbAnnouncements] = new KeyBinding(KeyCode.Alpha0),
-            [GameKey.ToggleSpeechInterrupt] = new KeyBinding(KeyCode.Alpha8),
-            [GameKey.ToggleDiagnostics] = new KeyBinding(KeyCode.Keypad9, requireCtrl: true),
+            [GameKey.ToggleSpeechInterrupt] = new KeyBinding(KeyCode.F11),
+            [GameKey.ToggleDiagnostics] = new KeyBinding(KeyCode.B, requireCtrl: true),
 
             [GameKey.AnnounceStatus] = new KeyBinding(KeyCode.H),
             [GameKey.AnnounceStats] = new KeyBinding(KeyCode.X),
@@ -145,6 +147,26 @@ namespace AccessibilityMod.Settings
             [GameKey.ReadSkillDescription] = new KeyBinding(KeyCode.N),
             [GameKey.AnnounceKimStatus] = new KeyBinding(KeyCode.K),
         };
+
+        /// <summary>
+        /// Stardew-like preset: identical to NumpadSafePreset except that it uses NO
+        /// numpad key at all (rule: must work on keyboards without a numpad, e.g.
+        /// laptops). The two numpad keys of the other preset move to the remaining free
+        /// F-keys: SelectEverything to F10, ToggleDialogReading to F12. Each action keeps
+        /// a unique base key because IsPressed tolerates extra held modifiers - two
+        /// actions sharing a base key outside the category if/else-if chain would fire
+        /// together.
+        /// </summary>
+        public static IReadOnlyDictionary<GameKey, KeyBinding> StardewPreset { get; } = BuildStardewPreset();
+
+        private static IReadOnlyDictionary<GameKey, KeyBinding> BuildStardewPreset()
+        {
+            var preset = new Dictionary<GameKey, KeyBinding>(
+                (IDictionary<GameKey, KeyBinding>)NumpadSafePreset);
+            preset[GameKey.SelectEverything] = new KeyBinding(KeyCode.F10);
+            preset[GameKey.ToggleDialogReading] = new KeyBinding(KeyCode.F12);
+            return preset;
+        }
 
         public static void Initialize()
         {

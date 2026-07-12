@@ -52,7 +52,7 @@ The mod follows a **modular system architecture** with clear separation of conce
 - **InputManager.cs**: Centralized keyboard input processing with accessibility hotkeys - dispatches via `KeyBindings.IsPressed(GameKey.X)` rather than hardcoded `UnityEngine.Input.GetKeyDown(KeyCode...)` calls
 
 ### Settings (mod/Settings/)
-- **GameKey.cs / KeyBindings.cs**: Every hotkey is a remappable `GameKey`, persisted via MelonPreferences to `UserData/AccessibilityMod.cfg` (`[KeyBindings]` category, one `"UnityKeyCodeName|RequireCtrl|RequireAlt|RequireShift"` string per action). Two built-in presets: the original US-QWERTY punctuation bindings (`Defaults`), and a layout-independent alternative (`NumpadSafePreset`) that reuses stardew-access's conventions (Escape/PageUp/PageDown/Ctrl+Home) where an equivalent exists and falls back to the numpad for the rest - punctuation keys like `[`, `]`, `\` move or require AltGr on non-US layouts (e.g. German QWERTZ), which was the root cause of the mod being effectively unusable there.
+- **GameKey.cs / KeyBindings.cs**: Every hotkey is a remappable `GameKey`, persisted via MelonPreferences to `UserData/AccessibilityMod.cfg` (`[KeyBindings]` category, one `"UnityKeyCodeName|RequireCtrl|RequireAlt|RequireShift"` string per action). Three built-in presets: the original US-QWERTY punctuation bindings (`Defaults` - punctuation keys like `[`, `]`, `\` move or require AltGr on non-US layouts such as German QWERTZ, which made the mod effectively unusable there), plus two layout-independent presets built around free F-keys after checking the game's own live keyboard bindings (Keypad1-9 pick dialogue options during conversations, Escape opens the pause menu, KeypadMinus zooms - see `GameKeybindConflictChecker`): `NumpadSafePreset` (F-keys + the two collision-free numpad keys Keypad0/KeypadDivide) and `StardewPreset` (identical but zero numpad usage - rule: must work on keyboards without a numpad). Both keep stardew-access's PageUp/PageDown/Ctrl+Home conventions; StopMovement is Space, the game's own stop key.
 - **AccessibilityPreferences.cs**: Dialog reading mode / orb announcements / speech interrupt, same cfg file, `[AccessibilityMod]` category.
 
 ### UI Integration (mod/UI/)
@@ -93,13 +93,17 @@ Default (original, US-QWERTY):
 - **`** - Announce current UI selection
 - **-** - Toggle dialog reading mode
 
-Layout-safe preset (recommended for non-US keyboards, or laptops without a numpad for the four navigation keys):
-- **Numpad 1/2/3/0** - Select NPCs/locations/loot/everything category
-- **Escape** - Stop automated movement
+Layout-safe presets (recommended for non-US keyboards). Shared keys:
+- **F2/F3/F4** - Select NPCs/locations/loot category (Ctrl+F2 focus waypoints, Alt+F2 create, Alt+F3 delete)
+- **F6/F7/F8** - Announce current selection / toggle sorting mode / distance scan
+- **Space** - Stop automated movement (same key the game itself uses)
 - **Page Down / Page Up** - Cycle category forward/backward
 - **Ctrl+Home** - Navigate to selected object
-- **Numpad 7/8/6** - Full scene scan / distance scan / announce current selection
-- **Numpad -** - Toggle dialog reading mode
+- **F11** - Toggle speech interrupt, **Ctrl+B** - toggle diagnostics
+
+Differing keys:
+- With numpad (`NumpadSafePreset`): **Numpad 0** select everything, **Numpad /** toggle dialog reading
+- Without numpad (`StardewPreset`): **F10** select everything, **F12** toggle dialog reading
 
 ### Keybind Editor Tool (tools/KeybindEditor)
 A standalone WinForms app (not part of the mod DLL) for editing `UserData/AccessibilityMod.cfg` without launching the game: pick a game folder, load a preset or freely rebind any action to any key, edit the dialog reading mode / orb announcements / speech interrupt settings, save. Localized (English/German). Optionally takes the game folder as `argv[0]` (`DiscoElysiumKeybindEditor.exe "<gamePath>"`) to skip the manual Browse step - used by the Start Menu shortcut the Installer creates. Requires the mod to have been built and installed at least once so its `GameKey` list conceptually matches (the tool's `GameKeyCatalog.cs` is a hand-kept mirror of `mod/Settings/KeyBindings.cs`'s `Defaults`/`NumpadSafePreset` - keep both in sync when adding/renaming a `GameKey`). Build: `cd tools/KeybindEditor && dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true`.

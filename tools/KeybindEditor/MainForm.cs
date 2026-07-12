@@ -17,6 +17,7 @@ public sealed class MainForm : Form
     private readonly Button resetSelectedButton;
     private readonly Button defaultPresetButton;
     private readonly Button safePresetButton;
+    private readonly Button stardewPresetButton;
     private readonly GroupBox generalGroup;
     private readonly Label dialogModeLabel;
     private readonly ComboBox dialogModeCombo;
@@ -73,11 +74,14 @@ public sealed class MainForm : Form
         resetSelectedButton = new Button { Left = 300, Top = 435, Width = 190 };
         resetSelectedButton.Click += ResetSelectedButton_Click;
 
-        defaultPresetButton = new Button { Left = 12, Top = 470, Width = 210 };
-        defaultPresetButton.Click += (_, _) => ApplyPreset(safe: false);
+        defaultPresetButton = new Button { Left = 12, Top = 470, Width = 200 };
+        defaultPresetButton.Click += (_, _) => ApplyPreset(Preset.Default);
 
-        safePresetButton = new Button { Left = 230, Top = 470, Width = 280 };
-        safePresetButton.Click += (_, _) => ApplyPreset(safe: true);
+        safePresetButton = new Button { Left = 220, Top = 470, Width = 235 };
+        safePresetButton.Click += (_, _) => ApplyPreset(Preset.NumpadSafe);
+
+        stardewPresetButton = new Button { Left = 463, Top = 470, Width = 232 };
+        stardewPresetButton.Click += (_, _) => ApplyPreset(Preset.Stardew);
 
         generalGroup = new GroupBox { Left = 12, Top = 510, Width = 683, Height = 100 };
         dialogModeLabel = new Label { Left = 12, Top = 28, Width = 130 };
@@ -97,7 +101,7 @@ public sealed class MainForm : Form
             languageLabel, languageCombo,
             gamePathLabel, gamePathBox, browseButton,
             bindingsList, rebindButton, cancelRebindButton, resetSelectedButton,
-            defaultPresetButton, safePresetButton,
+            defaultPresetButton, safePresetButton, stardewPresetButton,
             generalGroup, saveButton, statusLabel,
         });
 
@@ -133,6 +137,7 @@ public sealed class MainForm : Form
         resetSelectedButton.Text = Strings.Get("ResetSelected");
         defaultPresetButton.Text = Strings.Get("PresetDefault");
         safePresetButton.Text = Strings.Get("PresetSafe");
+        stardewPresetButton.Text = Strings.Get("PresetStardew");
         generalGroup.Text = Strings.Get("GeneralGroup");
         dialogModeLabel.Text = Strings.Get("DialogModeLabel");
         dialogModeCombo.AccessibleName = Strings.Get("DialogModeLabel");
@@ -292,14 +297,26 @@ public sealed class MainForm : Form
         SetStatus(Strings.Get("StatusReset", action.Label));
     }
 
-    private void ApplyPreset(bool safe)
+    private enum Preset { Default, NumpadSafe, Stardew }
+
+    private void ApplyPreset(Preset preset)
     {
         foreach (var action in GameKeyCatalog.Actions)
         {
-            config.KeyBindings[action.Name] = safe ? action.SafeBinding : action.DefaultBinding;
+            config.KeyBindings[action.Name] = preset switch
+            {
+                Preset.NumpadSafe => action.SafeBinding,
+                Preset.Stardew => action.StardewBinding,
+                _ => action.DefaultBinding,
+            };
         }
         RefreshBindingsList();
-        SetStatus(safe ? Strings.Get("StatusSafePreset") : Strings.Get("StatusDefaultPreset"));
+        SetStatus(preset switch
+        {
+            Preset.NumpadSafe => Strings.Get("StatusSafePreset"),
+            Preset.Stardew => Strings.Get("StatusStardewPreset"),
+            _ => Strings.Get("StatusDefaultPreset"),
+        });
     }
 
     private void SaveButton_Click(object? sender, EventArgs e)
