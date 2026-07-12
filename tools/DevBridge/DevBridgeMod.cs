@@ -149,6 +149,7 @@ namespace DevBridge
                     var pos = GameObjectUtils.GetPlayerPosition();
                     sb.AppendLine($"player: {pos.x:F2} {pos.y:F2} {pos.z:F2}");
                     sb.AppendLine($"inConversation: {DialogStateManager.IsInConversation()}");
+                    sb.AppendLine($"dialogUiActive: {DialogStateManager.IsDialogUiActive}");
                     sb.AppendLine($"dialogMode: {DialogStateManager.CurrentDialogMode}");
                     sb.AppendLine($"autoAdvance: {DialogAutoAdvance.Enabled}");
                     sb.AppendLine($"autoInteract: {AccessibilityPreferences.GetAutoInteract()}");

@@ -242,10 +242,12 @@ namespace AccessibilityMod.UI
         }
 
         /// <summary>
-        /// True while the dialogue UI is actually on screen. Unlike the
-        /// isInConversation flag (which some flows never set - verified in the intro),
-        /// the game's own continue button being active is a reliable signal, and it is
-        /// exactly the state in which world navigation must not run.
+        /// True while a conversation is actually running, straight from the dialogue
+        /// system itself (PixelCrushers DialogueManager.IsConversationActive) - the
+        /// global semantic signal. UI-level proxies proved unreliable in both
+        /// directions: the mod's own isInConversation flag stays false in some flows
+        /// (intro), and the continue button object stays activeInHierarchy after a
+        /// conversation ends, which locked players out of navigation for good.
         /// </summary>
         public static bool IsDialogUiActive
         {
@@ -253,8 +255,7 @@ namespace AccessibilityMod.UI
             {
                 try
                 {
-                    var button = Il2Cpp.SunshineContinueButton.instance;
-                    return button != null && button.gameObject != null && button.gameObject.activeInHierarchy;
+                    return Il2CppPixelCrushers.DialogueSystem.DialogueManager.IsConversationActive;
                 }
                 catch
                 {
