@@ -57,7 +57,19 @@ public static class Strings
         ["UpdateChecking"] = ("Checking for installer updates...", "Prüfe auf Installer-Updates..."),
         ["UpdateDownloading"] = ("A newer installer is available ({0}) - updating and restarting...", "Ein neuerer Installer ist verfügbar ({0}) - aktualisiere und starte neu..."),
         ["UpdateCheckFailed"] = ("Installer update check failed ({0}). Installation is not possible with a possibly outdated installer - please check your internet connection or download the latest setup from the releases page.", "Installer-Update-Prüfung fehlgeschlagen ({0}). Mit einem womöglich veralteten Installer ist keine Installation möglich - bitte Internetverbindung prüfen oder das neueste Setup von der Release-Seite laden."),
+        ["UpdateConfirm"] = (
+            "A newer version of the installer is available ({0}). It has to be updated before it can install anything, so that an outdated installer does not install the mod wrongly.\n\nUpdate now? The installer will replace itself and restart.",
+            "Eine neuere Version des Installers ist verfügbar ({0}). Er muss aktualisiert werden, bevor er etwas installieren kann - sonst könnte ein veralteter Installer den Mod falsch installieren.\n\nJetzt aktualisieren? Der Installer ersetzt sich selbst und startet neu."),
+        ["UpdateDeclined"] = (
+            "Update declined. Nothing was installed - the installer needs to be up to date before it can install the mod.",
+            "Aktualisierung abgelehnt. Es wurde nichts installiert - der Installer muss aktuell sein, bevor er den Mod installieren kann."),
         ["UpdateRestarted"] = ("Installer updated to the latest version.", "Installer wurde auf die neueste Version aktualisiert."),
+        ["UpdateRestartFailed"] = (
+            "Could not relaunch automatically ({0}) - trying another way...",
+            "Automatischer Neustart nicht möglich ({0}) - versuche einen anderen Weg..."),
+        ["UpdateDoneRestartYourself"] = (
+            "The installer was updated to the latest version but could not relaunch itself. Please start it again - it is ready to use.",
+            "Der Installer wurde auf die neueste Version aktualisiert, konnte sich aber nicht selbst neu starten. Bitte starte ihn einfach erneut - er ist einsatzbereit."),
 
         ["DotNetMissingPrompt"] = ("The mod needs the .NET 6 runtime, which is not installed. Download and install it now (about 30 MB, official Microsoft installer)?", "Der Mod benötigt die .NET-6-Laufzeitumgebung, die nicht installiert ist. Jetzt herunterladen und installieren (ca. 30 MB, offizieller Microsoft-Installer)?"),
         ["DotNetDownloading"] = ("Downloading .NET 6 runtime...", "Lade .NET-6-Laufzeitumgebung herunter..."),

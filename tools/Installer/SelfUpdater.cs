@@ -16,7 +16,7 @@ public static class SelfUpdater
     private const string VersionAssetUrl =
         "https://github.com/danijel1124/Disco-A11y/releases/download/nightly/installer-version.txt";
 
-    public enum Result { UpToDate, Restarting, Blocked }
+    public enum Result { UpToDate, Restarting, Blocked, UpdatedButRestartFailed, Declined }
 
     public static string LocalBuildId => GetMetadata("BuildId") ?? "dev";
     private static string Flavor => GetMetadata("Flavor") ?? "framework";
@@ -25,13 +25,21 @@ public static class SelfUpdater
         Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>()
             .FirstOrDefault(a => a.Key == key)?.Value;
 
-    public static async Task<Result> EnsureLatestAsync(string[] originalArgs, Action<string> log)
+    /// <param name="confirmUpdate">
+    /// Asked before anything is downloaded, with the new version as its argument. Updating
+    /// replaces the program the user just started, so it is their decision to make, not
+    /// something to do quietly behind their back - even though declining means no install.
+    /// </param>
+    public static async Task<Result> EnsureLatestAsync(string[] originalArgs, Action<string> log, Func<string, bool> confirmUpdate)
     {
         try
         {
             using var http = new HttpClient();
             http.DefaultRequestHeaders.UserAgent.ParseAdd("DiscoElysiumInstaller/1.0");
-            http.Timeout = TimeSpan.FromSeconds(20);
+            // Generous, because the same client also fetches the installer binary, and the
+            // standalone flavor is ~68 MB: at 20 seconds that download simply dies on a
+            // normal home connection, and the user is told the update check failed.
+            http.Timeout = TimeSpan.FromMinutes(10);
 
             var remote = (await http.GetStringAsync(VersionAssetUrl)).Trim();
             if (remote.Length == 0)
@@ -43,6 +51,12 @@ public static class SelfUpdater
             if (remote == LocalBuildId)
             {
                 return Result.UpToDate;
+            }
+
+            if (!confirmUpdate(remote))
+            {
+                log(Strings.Get("UpdateDeclined"));
+                return Result.Declined;
             }
 
             log(Strings.Get("UpdateDownloading", remote));
@@ -61,20 +75,59 @@ public static class SelfUpdater
                 await content.CopyToAsync(file);
             }
 
+            // A downloaded exe carries a mark-of-the-web stream, which makes ShellExecute
+            // refuse to launch it (or throw an empty-message Win32 error) - especially from
+            // a removable drive. It is our own release asset; unblock it.
+            RemoveMarkOfTheWeb(newPath);
+
             // A running exe cannot be overwritten but can be renamed away.
             if (File.Exists(oldPath)) File.Delete(oldPath);
             File.Move(exePath, oldPath);
             File.Move(newPath, exePath);
 
             var args = string.Join(" ", originalArgs.Select(a => a.Contains(' ') ? $"\"{a}\"" : a));
-            Process.Start(new ProcessStartInfo(exePath, $"--updated {args}".Trim()) { UseShellExecute = true });
-            return Result.Restarting;
+            return TryRestart(exePath, args, log) ? Result.Restarting : Result.UpdatedButRestartFailed;
         }
         catch (Exception ex)
         {
-            log(Strings.Get("UpdateCheckFailed", ex.Message));
+            // ex.Message alone can be empty (some Win32/IO failures carry nothing), which
+            // produced the useless "update check failed ()" a user actually hit.
+            var detail = string.IsNullOrWhiteSpace(ex.Message) ? ex.GetType().Name : $"{ex.GetType().Name}: {ex.Message}";
+            log(Strings.Get("UpdateCheckFailed", detail));
             return Result.Blocked;
         }
+    }
+
+    private static void RemoveMarkOfTheWeb(string path)
+    {
+        try
+        {
+            File.Delete(path + ":Zone.Identifier");
+        }
+        catch { /* no such stream, or the filesystem has none (FAT32 stick) - both fine */ }
+    }
+
+    /// <summary>
+    /// Restarts into the freshly installed binary. Tries the shell first (keeps the
+    /// window behaving like a user double-click), then a plain process start, which
+    /// works in the environments where the shell refuses.
+    /// </summary>
+    private static bool TryRestart(string exePath, string args, Action<string> log)
+    {
+        foreach (var useShell in new[] { true, false })
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(exePath, $"--updated {args}".Trim()) { UseShellExecute = useShell });
+                return true;
+            }
+            catch (Exception ex)
+            {
+                log(Strings.Get("UpdateRestartFailed", ex.GetType().Name));
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Removes the leftover .old binary after a successful swap-restart.</summary>

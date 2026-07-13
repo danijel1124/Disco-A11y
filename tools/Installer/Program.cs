@@ -57,7 +57,10 @@ internal static class Program
     private static void Main(string[] args)
     {
         var wasUpdated = args.Contains("--updated");
-        if (wasUpdated) SelfUpdater.CleanupAfterUpdate();
+        // Unconditional: when a relaunch fails, the .old binary is left behind and the
+        // next run is a plain start without --updated, which used to leave it lying there
+        // next to the installer forever.
+        SelfUpdater.CleanupAfterUpdate();
         args = args.Where(a => a != "--updated").ToArray();
 
         ExtractBundledFiles();
@@ -66,12 +69,43 @@ internal static class Program
         if (isCli) AttachConsole(ATTACH_PARENT_PROCESS);
         void Log(string s) { if (isCli) Console.WriteLine(s); }
 
+        if (!isCli) ApplicationConfiguration.Initialize();
+
         // Mandatory self-update: with very active development an outdated installer
-        // binary could install wrongly, so no update = no installation.
+        // binary could install wrongly, so no update = no installation. Mandatory, but
+        // never silent - the GUI asks first, because replacing the program someone just
+        // started is not something to do behind their back. In --cli every step is
+        // printed to the console the caller is watching, so it proceeds on its own.
         if (!args.Contains("--no-selfupdate") && SelfUpdater.LocalBuildId != "dev")
         {
-            var result = SelfUpdater.EnsureLatestAsync(args, Log).GetAwaiter().GetResult();
+            bool Confirm(string newVersion) => isCli || MessageBox.Show(
+                Strings.Get("UpdateConfirm", newVersion),
+                Strings.Get("WindowTitle"),
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Information) == DialogResult.OK;
+
+            var result = SelfUpdater.EnsureLatestAsync(args, Log, Confirm).GetAwaiter().GetResult();
             if (result == SelfUpdater.Result.Restarting) return;
+
+            if (result == SelfUpdater.Result.Declined)
+            {
+                var declined = Strings.Get("UpdateDeclined");
+                if (isCli) { Log(declined); Environment.ExitCode = 1; return; }
+                MessageBox.Show(declined, Strings.Get("WindowTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // The update itself worked - only the relaunch did not. Saying "update check
+            // failed, no installation possible" here would be a lie that leaves the user
+            // stuck with a working, current installer they think is broken.
+            if (result == SelfUpdater.Result.UpdatedButRestartFailed)
+            {
+                var message = Strings.Get("UpdateDoneRestartYourself");
+                if (isCli) { Log(message); return; }
+                MessageBox.Show(message, Strings.Get("WindowTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             if (result == SelfUpdater.Result.Blocked)
             {
                 var reason = Strings.Get("UpdateCheckFailed", "see above");
@@ -100,7 +134,6 @@ internal static class Program
             return;
         }
 
-        ApplicationConfiguration.Initialize();
         Application.Run(new MainForm());
     }
 
