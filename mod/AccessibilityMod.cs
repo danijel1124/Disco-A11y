@@ -189,6 +189,7 @@ namespace AccessibilityMod
 
                 UpdateNotifier.Update();
                 UI.ScreenAnnouncer.Update();
+                UI.ResponseListAnnouncer.Update();
 
                 // Update movement monitoring
                 navigationSystem.UpdateMovement();

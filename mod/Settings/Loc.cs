@@ -94,7 +94,31 @@ namespace AccessibilityMod.Settings
             ["ItemCountMany"] = (
                 "{0} items.",
                 "{0} Gegenstände."),
+            ["ResponseOne"] = (
+                "One option:",
+                "Eine Option:"),
+            ["ResponseMany"] = (
+                "{0} options:",
+                "{0} Optionen:"),
+            // The game's own dialogue shortcut keys (1-9) exist, but proved unreliable in
+            // testing; arrow keys plus Enter always work, so that is what we tell people.
+            ["ResponseHowTo"] = (
+                "Use the arrow keys to choose, Enter to confirm.",
+                "Mit den Pfeiltasten wählen, Enter bestätigen."),
+            // Buttons whose label is a picture, not text (I2LocalizeButton). All the game
+            // leaves behind is the sprite's name, so these are our own translations of it.
+            // See TextExtractor.NameFromSpriteTerm for how the key is derived.
+            ["UITerm_begin"] = ("Begin", "Beginnen"),
+            ["UITerm_continue"] = ("Continue", "Fortsetzen"),
+            ["UITerm_back"] = ("Back", "Zurück"),
+            ["UITerm_cancel"] = ("Cancel", "Abbrechen"),
+            ["UITerm_confirm"] = ("Confirm", "Bestätigen"),
+            ["UITerm_accept"] = ("Accept", "Annehmen"),
+            ["UITerm_skip"] = ("Skip", "Überspringen"),
         };
+
+        /// <summary>Whether we have a name for this key, as opposed to Get's echo of the key itself.</summary>
+        public static bool Has(string key) => Table.ContainsKey(key);
 
         public static string Get(string key) =>
             Table.TryGetValue(key, out var entry) ? (IsGerman ? entry.De : entry.En) : key;

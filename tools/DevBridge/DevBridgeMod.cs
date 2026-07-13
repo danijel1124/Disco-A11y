@@ -335,7 +335,7 @@ namespace DevBridge
                            "select npcs|locations|loot|all | cycle [back] | category next|prev\n" +
                            "navigate | interact | stop | announce\n" +
                            "dialog | continue\n" +
-                           "teleport <x> <y> <z> | quickload | devmode\n" +
+                           "teleport <x> <y> <z> | quickload | loadnewest | saves | devmode\n" +
                            "readingmode off|full|speaker | set autoread|autointeract|captions on|off\n" +
                            "Transports: this file channel, or TCP 127.0.0.1 (port in UserData/DevBridge/port.txt);\n" +
                            "socket: one command per line, response ends with <<END>>, push events start with '! '";
@@ -588,6 +588,39 @@ namespace DevBridge
                     return sb.ToString().TrimEnd();
                 }
 
+                case "inspect":
+                {
+                    // Dumps every component and text-bearing child of the focused UI object.
+                    // Used to find out why an element the game clearly shows ("BEGINNEN")
+                    // is invisible to the mod's text extraction.
+                    var es = UnityEngine.EventSystems.EventSystem.current;
+                    var sel = es?.currentSelectedGameObject;
+                    if (sel == null) return "(nothing selected)";
+
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"selected: {sel.name}");
+                    sb.AppendLine("components:");
+                    foreach (var c in sel.GetComponents<Component>())
+                    {
+                        if (c != null) sb.AppendLine("  " + c.GetIl2CppType().FullName);
+                    }
+                    sb.AppendLine("children with components:");
+                    foreach (var t in sel.GetComponentsInChildren<Transform>())
+                    {
+                        if (t == null) continue;
+                        foreach (var c in t.GetComponents<Component>())
+                        {
+                            if (c == null) continue;
+                            var type = c.GetIl2CppType().FullName;
+                            if (type.Contains("Text") || type.Contains("Label"))
+                            {
+                                sb.AppendLine($"  [{t.name}] {type}");
+                            }
+                        }
+                    }
+                    return sb.ToString().TrimEnd();
+                }
+
                 case "screen":
                 {
                     // Accessibility audit tool: dump every piece of text actually visible
@@ -704,10 +737,20 @@ namespace DevBridge
                 {
                     var persistence = UnityEngine.Object.FindObjectOfType<Il2Cpp.SunshinePersistence>();
                     if (persistence == null) return "SunshinePersistence not found";
+
+                    // Loading with nothing to load leaves the game hanging on the loading
+                    // screen forever, and the bridge used to answer "triggered" to that -
+                    // the caller then waits for a game that is never coming back.
+                    string newest = NewestSaveName();
+                    if (newest == null) return "no save games exist - nothing to load (start a new game first)";
+
                     if (verb == "quickload") persistence.DoQuickLoad();
                     else persistence.LoadNewest();
-                    return $"{verb} triggered";
+                    return $"{verb} triggered (newest save: {newest})";
                 }
+
+                case "saves":
+                    return NewestSaveName() is string s ? $"newest save: {s}" : "no save games";
 
                 case "devmode":
                 {
@@ -766,6 +809,25 @@ namespace DevBridge
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        /// <summary>
+        /// The newest save the game itself would load, or null when there is none. Asks the
+        /// game's own file manager - the same source LoadNewest() reads - rather than
+        /// guessing from the save directory, which also holds Steam's bookkeeping files.
+        /// </summary>
+        private static string NewestSaveName()
+        {
+            try
+            {
+                string last = Il2Cpp.SunshinePersistenceFileManager.GetLastSave();
+                return string.IsNullOrWhiteSpace(last) ? null : last;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Warning($"[BRIDGE] Could not read save list: {ex.Message}");
+                return null;
+            }
+        }
 
         private const uint KEYEVENTF_KEYUP = 0x0002;
 

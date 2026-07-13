@@ -116,6 +116,16 @@ namespace AccessibilityMod.UI
                     }
                 }
 
+                // Some of the game's buttons carry no text at all: they render their label
+                // as a per-language sprite (I2LocalizeButton swaps the image, see the
+                // "BEGINNEN" button that starts the intro). Those were unreadable by any
+                // screen reader. They do carry the localization term they were rendered
+                // from, so ask the game's own localization system what that term says.
+                if (string.IsNullOrEmpty(result))
+                {
+                    result = ExtractLocalizedTerm(uiObject);
+                }
+
                 // Fix RTL text that was reversed by I2 Localization for visual display.
                 // FixForScreenReader auto-detects whether text needs reversal by examining
                 // Arabic presentation form characters — no external flags needed.
@@ -126,6 +136,66 @@ namespace AccessibilityMod.UI
                 MelonLogger.Error($"Error extracting text content: {ex}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// The label of an element whose text exists only as a localized image, resolved
+        /// through the game's own localization system. Returns null when the element has
+        /// no localization component, which is the normal case.
+        /// </summary>
+        private static string ExtractLocalizedTerm(GameObject uiObject)
+        {
+            try
+            {
+                var localize = uiObject.GetComponent<Il2CppI2.Loc.Localize>()
+                               ?? uiObject.GetComponentInChildren<Il2CppI2.Loc.Localize>();
+                if (localize == null) return null;
+
+                string term = localize.Term;
+                if (string.IsNullOrEmpty(term)) return null;
+
+                string translated = Il2CppI2.Loc.LocalizationManager.GetTranslation(term);
+                if (!string.IsNullOrWhiteSpace(translated) && translated != term) return translated.Trim();
+
+                // These terms are sprite names, not text keys ("button-begin-de"), so the
+                // localization table has nothing to say about them. Strip the decoration
+                // down to the meaning ("begin") and let our own table name it properly.
+                return NameFromSpriteTerm(term);
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Warning($"[TEXT] Could not resolve localized term: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// A speakable label from a localized sprite name: "Buttons/button-begin-de" becomes
+        /// "begin", which our own table then names in the player's language. Terms we have
+        /// no name for at least come out as readable words instead of a slug.
+        /// </summary>
+        private static string NameFromSpriteTerm(string term)
+        {
+            int slash = term.LastIndexOf('/');
+            string slug = slash >= 0 ? term.Substring(slash + 1) : term;
+
+            var parts = slug.Split(new[] { '-', '_' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+            // The sprite exists once per language, so the term carries a language suffix
+            // ("...-de") that says nothing about what the button does.
+            if (parts.Count > 1 && parts[parts.Count - 1].Length == 2)
+                parts.RemoveAt(parts.Count - 1);
+
+            if (parts.Count > 1 && (parts[0] == "button" || parts[0] == "btn"))
+                parts.RemoveAt(0);
+
+            if (parts.Count == 0) return term;
+
+            string key = "UITerm_" + string.Join("-", parts);
+            if (Settings.Loc.Has(key)) return Settings.Loc.Get(key);
+
+            string words = string.Join(" ", parts);
+            return char.ToUpperInvariant(words[0]) + words.Substring(1);
         }
 
         /// <summary>
