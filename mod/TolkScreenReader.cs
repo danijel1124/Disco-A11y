@@ -164,6 +164,13 @@ namespace AccessibilityMod
             }
             else
             {
+                // Logged here rather than above, because a queued announcement passes
+                // through this method twice - once to be queued, once to be spoken - and
+                // a transcript that says everything twice is worse than none. This is also
+                // the moment the player actually hears it, which is what the timestamps
+                // are supposed to mean.
+                SpeechLog.Write(text);
+
                 // Immediate announcement - speak right away
                 // Apply global interrupt setting - if enabled, always interrupt
                 bool effectiveInterrupt = interrupt || globalInterruptEnabled;

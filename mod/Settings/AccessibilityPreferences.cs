@@ -14,6 +14,7 @@ namespace AccessibilityMod.Settings
         private static MelonPreferences_Entry<bool> autoInteractEntry;
         private static MelonPreferences_Entry<bool> tutorialTipsEntry;
         private static MelonPreferences_Entry<string> languageEntry;
+        private static MelonPreferences_Entry<bool> speechLogEntry;
 
         public static void Initialize()
         {
@@ -43,6 +44,9 @@ namespace AccessibilityMod.Settings
 
             languageEntry = category.CreateEntry<string>("Language", "auto",
                 "Language for localized announcements: auto, en, de");
+
+            speechLogEntry = category.CreateEntry<bool>("SpeechLog", false,
+                "Write everything the mod says to UserData/SpeechLog.txt, with timestamps");
 
             MelonLogger.Msg($"[PREFERENCES] Initialized - Dialog: {GetDialogMode()}, Orbs: {GetOrbAnnouncements()}, Interrupt: {GetSpeechInterrupt()}, AudioCaptions: {GetSpeakAudioCaptions()}");
         }
@@ -93,6 +97,17 @@ namespace AccessibilityMod.Settings
         public static void SetDialogAutoAdvance(bool enabled)
         {
             dialogAutoAdvanceEntry.Value = enabled;
+            category.SaveToFile();
+        }
+
+        public static bool GetSpeechLog()
+        {
+            return speechLogEntry.Value;
+        }
+
+        public static void SetSpeechLog(bool enabled)
+        {
+            speechLogEntry.Value = enabled;
             category.SaveToFile();
         }
 

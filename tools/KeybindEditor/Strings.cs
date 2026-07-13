@@ -42,6 +42,9 @@ public static class Strings
         ["SpeakAudioCaptions"] = ("Speak sound captions", "Geräusch-Untertitel vorlesen"),
         ["DialogAutoAdvance"] = ("Auto-advance dialog after reading (autoread)", "Dialog nach dem Vorlesen automatisch weiterschalten (Autoread)"),
         ["AutoInteract"] = ("Auto-interact on arrival", "Bei Ankunft automatisch interagieren"),
+        ["SpeechLog"] = (
+            "Write everything spoken to UserData\\SpeechLog.txt (diagnostics - lets you look up afterwards what was said)",
+            "Alles Gesprochene in UserData\\SpeechLog.txt mitschreiben (Diagnose - zum späteren Nachlesen, was gesagt wurde)"),
         ["Save"] = ("Save", "Speichern"),
         ["StatusAccessible"] = ("Status", "Status"),
         ["LanguageLabel"] = ("Language:", "Sprache:"),
