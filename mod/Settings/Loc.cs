@@ -102,6 +102,9 @@ namespace AccessibilityMod.Settings
                 "{0} Optionen:"),
             // The game's own dialogue shortcut keys (1-9) exist, but proved unreliable in
             // testing; arrow keys plus Enter always work, so that is what we tell people.
+            ["DialogEnded"] = (
+                "Conversation ended.",
+                "Dialog beendet."),
             ["ResponseHowTo"] = (
                 "Use the arrow keys to choose, Enter to confirm.",
                 "Mit den Pfeiltasten wählen, Enter bestätigen."),
