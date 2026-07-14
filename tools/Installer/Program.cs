@@ -240,6 +240,11 @@ internal static class Program
                 await ModInstaller.ApplyPresetAsync(gamePath, preset, Log);
             }
 
+            // Configurator + dev bridge come from the release, like the mod itself. The
+            // installer no longer unpacks executables out of its own binary.
+            await ToolsBundle.EnsureAsync(ModInstaller.DefaultOwner, ModInstaller.DefaultRepo,
+                includePrerelease, Log);
+
             if (devBridge.HasValue)
             {
                 var bridgeResult = ModInstaller.SetDevBridgeEnabled(gamePath, devBridge.Value);

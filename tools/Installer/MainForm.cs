@@ -170,6 +170,11 @@ public sealed class MainForm : Form
                 await ModInstaller.ApplyPresetAsync(gamePath, hasNumpad == DialogResult.Yes ? "numpad" : "stardew", Log);
             }
 
+            // The configurator and the dev bridge come from the release, like everything else
+            // this installer puts on disk - it no longer unpacks executables out of itself.
+            await ToolsBundle.EnsureAsync(ModInstaller.DefaultOwner, ModInstaller.DefaultRepo,
+                prereleaseCheck.Checked, Log);
+
             var bridgeResult = ModInstaller.SetDevBridgeEnabled(gamePath, devBridgeCheck.Checked);
             LogDevBridgeResult(bridgeResult);
 

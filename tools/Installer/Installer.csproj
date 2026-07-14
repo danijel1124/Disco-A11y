@@ -35,15 +35,16 @@
     </None>
   </ItemGroup>
 
-  <!-- Single-file "setup.exe" distribution: everything the installer needs beyond
-       itself is embedded and self-extracted next to the exe on startup, so shipping
-       just DiscoElysiumInstaller.exe is enough. Requires the configurator and dev
-       bridge to have been built first. -->
+  <!-- The setup exe carries ONLY what it needs to talk: the Tolk natives, unpacked next to
+       it on startup so a blind user is not left in front of a silent window while the
+       network is asked. Everything the installer PUTS ON DISK (the configurator, the dev
+       bridge, the mod, MelonLoader) is downloaded from the release - see ToolsBundle.cs.
+       Carrying foreign executables inside the exe and dropping them at startup is what a
+       dropper does, and Defender's ML heuristics duly quarantined the setup as
+       Trojan:Win32/Bearfoos.B!ml on a user's machine. -->
   <ItemGroup>
     <EmbeddedResource Include="TolkNative\Tolk.dll" LogicalName="bundle:Tolk.dll" />
     <EmbeddedResource Include="TolkNative\nvdaControllerClient64.dll" LogicalName="bundle:nvdaControllerClient64.dll" />
-    <EmbeddedResource Include="..\KeybindEditor\bin\Release\net8.0-windows\win-x64\publish\DiscoElysiumModConfigurator.exe" LogicalName="bundle:DiscoElysiumModConfigurator.exe" />
-    <EmbeddedResource Include="..\DevBridge\bin\Release\net6.0\DevBridge.dll" LogicalName="bundle:DevBridge.dll" />
   </ItemGroup>
 
 </Project>

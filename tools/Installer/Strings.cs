@@ -27,6 +27,18 @@ public static class Strings
         ["StepDevBridgeInstalled"] = ("AI dev bridge installed (Mods/DevBridge.dll). Command channel: UserData/DevBridge/.", "AI-Dev-Bridge installiert (Mods/DevBridge.dll). Kommandokanal: UserData/DevBridge/."),
         ["StepDevBridgeRemoved"] = ("AI dev bridge removed.", "AI-Dev-Bridge entfernt."),
         ["StepDevBridgeMissing"] = ("DevBridge.dll not found next to this installer - AI dev bridge skipped.", "DevBridge.dll liegt nicht neben diesem Installer - AI-Dev-Bridge übersprungen."),
+        ["StepToolsDownloading"] = (
+            "Downloading the tools (configurator, dev bridge)...",
+            "Lade die Werkzeuge herunter (Konfigurator, Dev-Bridge)..."),
+        ["StepToolsReady"] = (
+            "Tools downloaded.",
+            "Werkzeuge heruntergeladen."),
+        ["StepToolsMissing"] = (
+            "The release has no tools package - configurator and dev bridge skipped.",
+            "Das Release enthält kein Werkzeug-Paket - Konfigurator und Dev-Bridge übersprungen."),
+        ["StepToolsFailed"] = (
+            "Could not download the tools: {0}",
+            "Werkzeuge konnten nicht geladen werden: {0}"),
         ["ReleasePackageBroken"] = (
             "The downloaded release package does not contain the mod (Mods/AccessibilityMod.dll). Nothing was installed.",
             "Das heruntergeladene Release-Paket enthält die Mod nicht (Mods/AccessibilityMod.dll). Es wurde nichts installiert."),
