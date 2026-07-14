@@ -57,7 +57,10 @@ namespace AccessibilityMod
             bool isFirstArea = lastAnnouncedScene == null;
             lastAnnouncedScene = sceneName;
             // The very first area after loading a save is where the player already
-            // knows they are - only transitions get announced.
+            // knows they are - only transitions get their NAME announced. The description
+            // is spoken regardless: knowing which room you are in is not the same as
+            // knowing what it looks like, and waking up after a load is exactly when a
+            // sighted player looks around.
             if (!isFirstArea)
             {
                 // The scene names are internal ("Pawnshop-int"); use the area's real name
@@ -65,8 +68,47 @@ namespace AccessibilityMod
                 var areaName = AreaDescriptions.GetName(sceneName) ?? sceneName.Replace("-", " ");
                 TolkScreenReader.Instance.Speak(
                     Loc.Get("AreaEntered", areaName), false, AnnouncementCategory.Queueable);
-                SpeakAreaDescription();
             }
+            SpeakAreaDescription();
+
+            // First time ever in this area: queue the long introduction. It is not spoken
+            // here but once the player actually has control (dialogue over) - waking up in
+            // the intro conversation is exactly the situation it exists for, and talking
+            // over that conversation would bury it.
+            if (AreaDescriptions.GetIntro(sceneName) != null
+                && !AccessibilityPreferences.HasSeenAreaIntro(sceneName))
+            {
+                pendingIntroScene = sceneName;
+            }
+        }
+
+        private string pendingIntroScene;
+
+        /// <summary>
+        /// Speaks the pending first-visit introduction the moment the player can act on
+        /// it: dialogue over, character standing in the world. "The first time you get
+        /// control" is the global version of "after the intro conversation".
+        /// </summary>
+        private void SpeakPendingIntroIfReady()
+        {
+            if (pendingIntroScene == null) return;
+            if (UI.DialogStateManager.IsDialogUiActive) return;
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (scene != pendingIntroScene)
+            {
+                // Left the area before it ever got spoken - it stays unseen and will be
+                // offered again next time.
+                pendingIntroScene = null;
+                return;
+            }
+
+            var intro = AreaDescriptions.GetIntro(scene);
+            pendingIntroScene = null;
+            if (intro == null) return;
+
+            TolkScreenReader.Instance.Speak(intro, false, AnnouncementCategory.Queueable);
+            AccessibilityPreferences.MarkAreaIntroSeen(scene);
         }
 
         /// <summary>
@@ -91,6 +133,23 @@ namespace AccessibilityMod
             }
 
             TolkScreenReader.Instance.Speak(description, onDemand, AnnouncementCategory.Queueable);
+        }
+
+        /// <summary>The long introduction, on demand - the "where am I, actually?" key.</summary>
+        public static void SpeakAreaIntro()
+        {
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            var intro = AreaDescriptions.GetIntro(scene);
+
+            if (string.IsNullOrEmpty(intro))
+            {
+                // The short description is better than nothing when no introduction
+                // has been written for this area yet.
+                SpeakAreaDescription(onDemand: true);
+                return;
+            }
+
+            TolkScreenReader.Instance.Speak(intro, true, AnnouncementCategory.Queueable);
         }
 
         public override void OnInitializeMelon()
@@ -214,6 +273,7 @@ namespace AccessibilityMod
                 TutorialGuide.Update();
 
                 AnnounceAreaIfChanged();
+                SpeakPendingIntroIfReady();
 
                 UpdateNotifier.Update();
                 UI.ScreenAnnouncer.Update();

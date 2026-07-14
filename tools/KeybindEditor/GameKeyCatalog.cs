@@ -52,5 +52,6 @@ public static class GameKeyCatalog
         new("AnnounceKimStatus", "Announce Kim dialogue status", "Kim-Dialogstatus ansagen", "K|False|False|False", "K|False|False|False", "K|False|False|False"),
         new("AnnounceNameSources", "Announce where the selected object's name comes from (diagnostics)", "Namensquellen des ausgewählten Objekts ansagen (Diagnose)", "N|True|False|False", "N|True|False|False", "N|True|False|False"),
         new("DescribeArea", "Describe the area you are in", "Beschreibung des aktuellen Bereichs", "U|False|False|False", "U|False|False|False", "U|False|False|False"),
+        new("DescribeAreaFull", "Full introduction of the area (what kind of place is this?)", "Ausführliche Einführung des Bereichs (was ist das hier für ein Ort?)", "U|True|False|False", "U|True|False|False", "U|True|False|False"),
     };
 }

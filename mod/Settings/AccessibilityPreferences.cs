@@ -16,6 +16,7 @@ namespace AccessibilityMod.Settings
         private static MelonPreferences_Entry<string> languageEntry;
         private static MelonPreferences_Entry<bool> speechLogEntry;
         private static MelonPreferences_Entry<bool> debugModeEntry;
+        private static MelonPreferences_Entry<string> seenAreaIntrosEntry;
 
         public static void Initialize()
         {
@@ -53,6 +54,9 @@ namespace AccessibilityMod.Settings
             // when you are working ON the mod rather than playing with it.
             debugModeEntry = category.CreateEntry<bool>("DebugMode", false,
                 "Debug mode: announce internal screens (SPECIAL, LOBBY, ...) and enable the name-sources key");
+
+            seenAreaIntrosEntry = category.CreateEntry<string>("SeenAreaIntros", "",
+                "Areas whose long first-visit introduction has already been spoken (comma-separated)");
 
             MelonLogger.Msg($"[PREFERENCES] Initialized - Dialog: {GetDialogMode()}, Orbs: {GetOrbAnnouncements()}, Interrupt: {GetSpeechInterrupt()}, AudioCaptions: {GetSpeakAudioCaptions()}");
         }
@@ -103,6 +107,20 @@ namespace AccessibilityMod.Settings
         public static void SetDialogAutoAdvance(bool enabled)
         {
             dialogAutoAdvanceEntry.Value = enabled;
+            category.SaveToFile();
+        }
+
+        public static bool HasSeenAreaIntro(string sceneName)
+        {
+            return ("," + seenAreaIntrosEntry.Value + ",").Contains("," + sceneName + ",");
+        }
+
+        public static void MarkAreaIntroSeen(string sceneName)
+        {
+            if (HasSeenAreaIntro(sceneName)) return;
+            seenAreaIntrosEntry.Value = string.IsNullOrEmpty(seenAreaIntrosEntry.Value)
+                ? sceneName
+                : seenAreaIntrosEntry.Value + "," + sceneName;
             category.SaveToFile();
         }
 

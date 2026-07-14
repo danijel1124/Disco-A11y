@@ -331,7 +331,13 @@ namespace AccessibilityMod.Input
             }
 
             // Describe the area again - what a sighted player can simply look at twice.
-            if (KeyBindings.IsPressed(GameKey.DescribeArea))
+            // The Ctrl variant must be checked first: IsPressed tolerates extra modifiers,
+            // so plain U would also fire while Ctrl is held.
+            if (KeyBindings.IsPressed(GameKey.DescribeAreaFull))
+            {
+                AccessibilityMod.SpeakAreaIntro();
+            }
+            else if (KeyBindings.IsPressed(GameKey.DescribeArea))
             {
                 AccessibilityMod.SpeakAreaDescription(onDemand: true);
             }

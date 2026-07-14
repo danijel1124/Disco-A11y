@@ -49,5 +49,8 @@ namespace AccessibilityMod.Settings
 
         /// <summary>Repeats the description of the area you are standing in.</summary>
         DescribeArea,
+
+        /// <summary>Repeats the long first-visit introduction of the area (what kind of place this is).</summary>
+        DescribeAreaFull,
     }
 }

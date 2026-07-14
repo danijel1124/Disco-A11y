@@ -172,11 +172,45 @@ namespace AccessibilityMod.Settings
                 "Der Hof hinter den Läden: nackter Beton, eine Ziegelwand, Rohre und ein rostiger Tank, dazwischen Bretter und Gerümpel. Hier hinten ist es dunkel, Licht kommt nur aus der Tür."),
         };
 
+        /// <summary>
+        /// The long, first-visit introduction: not what the room looks like, but where you
+        /// ARE - what kind of place this is and how it connects to the world around it.
+        ///
+        /// This exists because the short description was not enough: the player woke up in
+        /// "a curved corridor with patterned tiled walls" and had no way of knowing he was
+        /// in a hostel above a bar until he walked downstairs and the loot names gave it
+        /// away. A sighted player reads all of that off the room in seconds - numbered
+        /// doors, a corridor of them, guests below. Spoken once, the first time an area is
+        /// entered; repeatable any time with its own key.
+        /// </summary>
+        private static readonly Dictionary<string, (string En, string De)> Intros = new()
+        {
+            ["Whirling-int-f2"] = (
+                "You are on the guest floor of the Whirling-in-Rags, a hostel in the coastal district of Martinaise: a bar room downstairs, rented rooms up here. Your room is one of them; outside it a curved corridor connects the other guest room doors, a staircase leads down into the cafeteria, and behind the glass front at the end lies a balcony over the street.",
+                "Du bist im Gästegeschoss des Whirling-in-Rags, eines Gasthauses im Küstenviertel Martinaise: unten der Schankraum, hier oben die vermieteten Zimmer. Dein Zimmer ist eines davon; davor verbindet ein gebogener Flur die übrigen Zimmertüren, eine Treppe führt hinunter ins Café, und hinter der Glasfront am Ende liegt ein Balkon über der Straße."),
+
+            ["Whirling-int-f1"] = (
+                "The ground floor of the Whirling-in-Rags: a cafeteria and bar where Martinaise eats and drinks. Guests sit at the long tables, the counter is staffed, and a glazed veranda runs along the front; the stairwell leads up to the guest rooms, and the main door leads out onto the square.",
+                "Das Erdgeschoss des Whirling-in-Rags: ein Café mit Bar, in dem Martinaise isst und trinkt. An den langen Tischen sitzen Gäste, die Theke ist besetzt, vorne verläuft eine verglaste Veranda; das Treppenhaus führt hinauf zu den Zimmern, die Haupttür hinaus auf den Platz."),
+
+            ["Martinaise-ext"] = (
+                "Martinaise is a run-down coastal district of the city of Revachol - once grand, long neglected: cracked facades, boarded-up shops, scaffolding nobody works on. From the square by the hostel, streets lead north towards the old church and the fishing huts by the water, east into the harbour quarter, and paths run down to the sea. Most of the district can be walked; doors and gates that matter will say so.",
+                "Martinaise ist ein heruntergekommenes Küstenviertel der Stadt Revachol - einst herrschaftlich, lange vernachlässigt: rissige Fassaden, verrammelte Läden, Gerüste, an denen niemand arbeitet. Vom Platz am Gasthaus führen Straßen nach Norden zur alten Kirche und zu den Fischerhütten am Wasser, nach Osten ins Hafenviertel, und Wege hinunter ans Meer. Das meiste ist zu Fuß erreichbar; Türen und Tore, die wichtig sind, melden sich."),
+        };
+
         /// <summary>The description for a scene, or null when we have not seen that area.</summary>
         public static string Get(string sceneName)
         {
             if (string.IsNullOrEmpty(sceneName)) return null;
             if (!Table.TryGetValue(sceneName, out var entry)) return null;
+            return Loc.IsGerman ? entry.De : entry.En;
+        }
+
+        /// <summary>The long first-visit introduction, or null when the area has none yet.</summary>
+        public static string GetIntro(string sceneName)
+        {
+            if (string.IsNullOrEmpty(sceneName)) return null;
+            if (!Intros.TryGetValue(sceneName, out var entry)) return null;
             return Loc.IsGerman ? entry.De : entry.En;
         }
 

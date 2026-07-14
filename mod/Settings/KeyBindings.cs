@@ -113,6 +113,7 @@ namespace AccessibilityMod.Settings
             // U: free in the game's own bindings (its L, J, C, T, I, M and friends are all
             // taken) and in the same physical spot on QWERTY and QWERTZ.
             [GameKey.DescribeArea] = new KeyBinding(KeyCode.U),
+            [GameKey.DescribeAreaFull] = new KeyBinding(KeyCode.U, requireCtrl: true),
         };
 
         /// <summary>
@@ -174,6 +175,7 @@ namespace AccessibilityMod.Settings
             // U: free in the game's own bindings (its L, J, C, T, I, M and friends are all
             // taken) and in the same physical spot on QWERTY and QWERTZ.
             [GameKey.DescribeArea] = new KeyBinding(KeyCode.U),
+            [GameKey.DescribeAreaFull] = new KeyBinding(KeyCode.U, requireCtrl: true),
         };
 
         /// <summary>
