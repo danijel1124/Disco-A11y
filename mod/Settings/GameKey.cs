@@ -55,5 +55,8 @@ namespace AccessibilityMod.Settings
 
         /// <summary>Reads the game's own description of the selected object - "what even is a Glastara?".</summary>
         DescribeItem,
+
+        /// <summary>Opens the mod debugger in its own window (live transcript + comments).</summary>
+        OpenModDebugger,
     }
 }

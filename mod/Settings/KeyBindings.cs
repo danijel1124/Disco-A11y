@@ -117,6 +117,9 @@ namespace AccessibilityMod.Settings
             // B: free in the game's own bindings, and it is the same key in every preset -
             // "describe what I have selected" is not something to hunt for.
             [GameKey.DescribeItem] = new KeyBinding(KeyCode.B),
+            // Ctrl+Y: the mod debugger window. Diagnostic, so it hides behind Ctrl and
+            // behind the debug-mode switch.
+            [GameKey.OpenModDebugger] = new KeyBinding(KeyCode.Y, requireCtrl: true),
         };
 
         /// <summary>
@@ -182,6 +185,9 @@ namespace AccessibilityMod.Settings
             // B: free in the game's own bindings, and it is the same key in every preset -
             // "describe what I have selected" is not something to hunt for.
             [GameKey.DescribeItem] = new KeyBinding(KeyCode.B),
+            // Ctrl+Y: the mod debugger window. Diagnostic, so it hides behind Ctrl and
+            // behind the debug-mode switch.
+            [GameKey.OpenModDebugger] = new KeyBinding(KeyCode.Y, requireCtrl: true),
         };
 
         /// <summary>

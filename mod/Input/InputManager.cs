@@ -348,6 +348,20 @@ namespace AccessibilityMod.Input
             {
                 DescribeSelectedItem();
             }
+
+            // The debugger window - also under the debug-mode umbrella, for the same reason
+            // as the name-sources key: nobody opens it while actually playing.
+            if (KeyBindings.IsPressed(GameKey.OpenModDebugger))
+            {
+                if (AccessibilityPreferences.GetDebugMode())
+                {
+                    Utils.ModDebuggerLauncher.Open();
+                }
+                else
+                {
+                    TolkScreenReader.Instance.Speak(Loc.Get("DebugModeOff"), true);
+                }
+            }
         }
 
         private void DescribeSelectedItem()

@@ -54,5 +54,6 @@ public static class GameKeyCatalog
         new("DescribeArea", "Describe the area you are in", "Beschreibung des aktuellen Bereichs", "U|False|False|False", "U|False|False|False", "U|False|False|False"),
         new("DescribeAreaFull", "Full introduction of the area (what kind of place is this?)", "Ausführliche Einführung des Bereichs (was ist das hier für ein Ort?)", "U|True|False|False", "U|True|False|False", "U|True|False|False"),
         new("DescribeItem", "Describe the selected object (what even is this?)", "Das ausgewählte Objekt beschreiben (was ist das überhaupt?)", "B|False|False|False", "B|False|False|False", "B|False|False|False"),
+        new("OpenModDebugger", "Open the mod debugger window (debug mode only)", "Mod-Debugger-Fenster öffnen (nur im Debug-Modus)", "Y|True|False|False", "Y|True|False|False", "Y|True|False|False"),
     };
 }

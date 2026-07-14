@@ -131,6 +131,15 @@ namespace AccessibilityMod.Settings
             ["ItemNoDescription"] = (
                 "{0}. The game gives no description for this.",
                 "{0}. Das Spiel gibt dazu keine Beschreibung her."),
+            ["DebuggerOpened"] = (
+                "Mod debugger opened in its own window.",
+                "Mod-Debugger in eigenem Fenster geöffnet."),
+            ["DebuggerAlreadyOpen"] = (
+                "The mod debugger is already open. Switch to it with Alt plus Tab.",
+                "Der Mod-Debugger ist schon offen. Wechsle mit Alt plus Tab dorthin."),
+            ["DebuggerNotFound"] = (
+                "Mod debugger not found. It ships in the tools bundle - put it in the game folder.",
+                "Mod-Debugger nicht gefunden. Er liegt im Tools-Paket — leg ihn in den Spielordner."),
             // The journal's map tab: keyboard access to the travel destinations.
             ["MapOpened"] = (
                 "Map. {0} travel destinations. {1} to cycle, {2} to travel.",

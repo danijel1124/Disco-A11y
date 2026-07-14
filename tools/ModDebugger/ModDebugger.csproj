@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>DiscoElysiumModDebugger</AssemblyName>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The installer already knows how to find the game (Steam registry + library folders);
+         a third copy of that logic would be a third thing to keep correct. -->
+    <Compile Include="..\Installer\GamePathFinder.cs">
+      <Link>GamePathFinder.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\KeybindEditor\TolkNative\Tolk.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Tolk.dll</Link>
+    </None>
+    <None Include="..\KeybindEditor\TolkNative\nvdaControllerClient64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>nvdaControllerClient64.dll</Link>
+    </None>
+  </ItemGroup>
+
+</Project>
