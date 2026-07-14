@@ -115,6 +115,9 @@ namespace AccessibilityMod.Settings
             ["NameSourceItem"] = ("item database: {0}.", "Item-Datenbank: {0}."),
             ["NameSourceDialogue"] = ("dialogue database: {0}.", "Dialog-Datenbank: {0}."),
             ["NameSourceNone"] = ("nothing", "nichts"),
+            ["AreaNoDescription"] = (
+                "This area has no description yet.",
+                "Für diesen Bereich gibt es noch keine Beschreibung."),
             // The journal's map tab: keyboard access to the travel destinations.
             ["MapOpened"] = (
                 "Map. {0} travel destinations. {1} to cycle, {2} to travel.",

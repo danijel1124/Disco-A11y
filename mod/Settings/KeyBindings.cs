@@ -110,6 +110,9 @@ namespace AccessibilityMod.Settings
             // Ctrl+N: free in the game's own bindings, and next to the plain N that reads
             // a skill description - both are "tell me more about what is selected".
             [GameKey.AnnounceNameSources] = new KeyBinding(KeyCode.N, requireCtrl: true),
+            // U: free in the game's own bindings (its L, J, C, T, I, M and friends are all
+            // taken) and in the same physical spot on QWERTY and QWERTZ.
+            [GameKey.DescribeArea] = new KeyBinding(KeyCode.U),
         };
 
         /// <summary>
@@ -168,6 +171,9 @@ namespace AccessibilityMod.Settings
             // Ctrl+N: free in the game's own bindings, and next to the plain N that reads
             // a skill description - both are "tell me more about what is selected".
             [GameKey.AnnounceNameSources] = new KeyBinding(KeyCode.N, requireCtrl: true),
+            // U: free in the game's own bindings (its L, J, C, T, I, M and friends are all
+            // taken) and in the same physical spot on QWERTY and QWERTZ.
+            [GameKey.DescribeArea] = new KeyBinding(KeyCode.U),
         };
 
         /// <summary>

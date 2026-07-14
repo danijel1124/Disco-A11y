@@ -320,6 +320,12 @@ namespace AccessibilityMod.Input
             {
                 Utils.NameSourceReporter.AnnounceForSelected(navigationSystem);
             }
+
+            // Describe the area again - what a sighted player can simply look at twice.
+            if (KeyBindings.IsPressed(GameKey.DescribeArea))
+            {
+                AccessibilityMod.SpeakAreaDescription(onDemand: true);
+            }
         }
 
         private void AnnounceCurrentSelection()

@@ -46,5 +46,8 @@ namespace AccessibilityMod.Settings
 
         /// <summary>Reports every name the selected object has, from every source. Diagnostic only - changes nothing.</summary>
         AnnounceNameSources,
+
+        /// <summary>Repeats the description of the area you are standing in.</summary>
+        DescribeArea,
     }
 }

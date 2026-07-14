@@ -60,9 +60,37 @@ namespace AccessibilityMod
             // knows they are - only transitions get announced.
             if (!isFirstArea)
             {
+                // The scene names are internal ("Pawnshop-int"); use the area's real name
+                // where we have one, and only fall back to the raw name where we do not.
+                var areaName = AreaDescriptions.GetName(sceneName) ?? sceneName.Replace("-", " ");
                 TolkScreenReader.Instance.Speak(
-                    Loc.Get("AreaEntered", sceneName.Replace("-", " ")), false, AnnouncementCategory.Queueable);
+                    Loc.Get("AreaEntered", areaName), false, AnnouncementCategory.Queueable);
+                SpeakAreaDescription();
             }
+        }
+
+        /// <summary>
+        /// What the area looks like - the thing a sighted player takes in the moment the
+        /// screen fades up, and which no announcement of ours ever replaced. Queued behind
+        /// the area name, and available on demand from the same key.
+        /// </summary>
+        public static void SpeakAreaDescription(bool onDemand = false)
+        {
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            var description = AreaDescriptions.Get(scene);
+
+            if (string.IsNullOrEmpty(description))
+            {
+                // Only worth saying when the player asked; on entering, silence is the
+                // honest answer for an area nobody has described yet.
+                if (onDemand)
+                {
+                    TolkScreenReader.Instance.Speak(Loc.Get("AreaNoDescription"), true);
+                }
+                return;
+            }
+
+            TolkScreenReader.Instance.Speak(description, onDemand, AnnouncementCategory.Queueable);
         }
 
         public override void OnInitializeMelon()

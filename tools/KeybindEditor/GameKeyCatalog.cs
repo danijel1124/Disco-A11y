@@ -51,5 +51,6 @@ public static class GameKeyCatalog
         new("ReadSkillDescription", "Read skill description", "Skill-Beschreibung vorlesen", "N|False|False|False", "N|False|False|False", "N|False|False|False"),
         new("AnnounceKimStatus", "Announce Kim dialogue status", "Kim-Dialogstatus ansagen", "K|False|False|False", "K|False|False|False", "K|False|False|False"),
         new("AnnounceNameSources", "Announce where the selected object's name comes from (diagnostics)", "Namensquellen des ausgewählten Objekts ansagen (Diagnose)", "N|True|False|False", "N|True|False|False", "N|True|False|False"),
+        new("DescribeArea", "Describe the area you are in", "Beschreibung des aktuellen Bereichs", "U|False|False|False", "U|False|False|False", "U|False|False|False"),
     };
 }
