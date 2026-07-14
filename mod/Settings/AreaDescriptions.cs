@@ -37,6 +37,7 @@ namespace AccessibilityMod.Settings
             ["Martinaise-ext"] = ("Martinaise", "Martinaise"),
             ["Whirling-int-f1"] = ("Whirling-in-Rags, ground floor", "Whirling-in-Rags, Erdgeschoss"),
             ["Whirling-int-f2"] = ("Whirling-in-Rags, guest floor", "Whirling-in-Rags, Gästegeschoss"),
+            ["Whirling-int-f3"] = ("Whirling-in-Rags, top floor", "Whirling-in-Rags, Dachgeschoss"),
             ["Church-int"] = ("The church", "Die Kirche"),
             ["Kiosque-int"] = ("The kiosk", "Der Kiosk"),
             ["Pawnshop-int"] = ("The pawnshop", "Das Pfandhaus"),
@@ -82,6 +83,10 @@ namespace AccessibilityMod.Settings
             ["Whirling-int-f2"] = (
                 "The guest floor above the cafeteria: a curved corridor with patterned tiled walls, looking down into the room below like a gallery. The guest room doors lead off it, a staircase carries on upwards, and behind a glass front lies the balcony.",
                 "Das Gästegeschoss über dem Café: ein gebogener Gang mit gemusterten Kachelwänden, der wie eine Galerie in den Gastraum hinunterblickt. Von ihm gehen die Zimmertüren ab, eine Treppe führt weiter nach oben, und hinter einer Glasfront liegt der Balkon."),
+
+            ["Whirling-int-f3"] = (
+                "The topmost floor, barely more than two rooms under the roof. One is lived in and warmly lit: a bed, a bookshelf, a picture on the wall, and a wide glass door to the balcony. Next to it, shelves of boxes and paperwork crowd around a desk with a lamp; a door leads out onto the roof, the stairs back down to the guest floor.",
+                "Das oberste Geschoss, kaum mehr als zwei Räume unter dem Dach. Der eine ist bewohnt und warm erleuchtet: ein Bett, ein Bücherbord, ein Bild an der Wand und eine breite Glastür zum Balkon. Nebenan drängen sich Regale voller Kisten und Papierkram um einen Schreibtisch mit Lampe; eine Tür führt hinaus aufs Dach, die Treppe wieder hinunter ins Gästegeschoss."),
 
             ["Church-int"] = (
                 "An abandoned wooden church, dark and draughty, its roof held up by heavy beams and scaffolding. A large crucifix hangs over the central aisle, and the far end of the hall opens into cold, deep shadow.",
