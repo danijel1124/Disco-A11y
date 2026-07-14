@@ -15,3 +15,4 @@ release/
 # Visual Studio solution files
 *.sln
 disco-all/
+tools/DevBridge/UserData/
