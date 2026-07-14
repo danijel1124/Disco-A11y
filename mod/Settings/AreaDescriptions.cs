@@ -57,6 +57,8 @@ namespace AccessibilityMod.Settings
             ["Commustudent-int"] = ("The basement room", "Der Kellerraum"),
             ["Union-boss-int"] = ("The container office", "Das Container-Büro"),
             ["Instigators-lair-int"] = ("The hideout", "Das Versteck"),
+            ["Capeside-wcw-int"] = ("A family flat in the apartments", "Eine Familienwohnung im Wohnblock"),
+            ["Doomed-commerce-int-s1"] = ("Behind the doomed commercial area", "Hinter dem verfluchten Gewerbeblock"),
         };
 
         /// <summary>The area's spoken name, or null - then the caller falls back to the scene name.</summary>
@@ -160,6 +162,14 @@ namespace AccessibilityMod.Settings
             ["Instigators-lair-int"] = (
                 "A hideout under tarpaulins and wooden props, with a floor of sand. Sharp stripes of light fall through the gaps overhead; otherwise it is dark and quiet in here.",
                 "Ein Versteck unter Planen und Holzstreben, der Boden aus Sand. Durch Ritzen im Dach fallen scharfe Lichtstreifen; sonst ist es hier dunkel und still."),
+
+            ["Capeside-wcw-int"] = (
+                "A family's flat: a bedroom with a bed under a window full of daylight, a kitchen with pots on the shelves, a child's room with a toy on the wall. It is small, lived-in and warm.",
+                "Die Wohnung einer Familie: ein Schlafzimmer mit einem Bett unter einem Fenster voller Tageslicht, eine Küche mit Töpfen in den Regalen, ein Kinderzimmer mit Spielzeug an der Wand. Sie ist klein, bewohnt und warm."),
+
+            ["Doomed-commerce-int-s1"] = (
+                "The yard behind the shops: bare concrete, a brick wall, pipes and a rusty tank, planks and junk lying about. It is dark back here, lit only from the doorway.",
+                "Der Hof hinter den Läden: nackter Beton, eine Ziegelwand, Rohre und ein rostiger Tank, dazwischen Bretter und Gerümpel. Hier hinten ist es dunkel, Licht kommt nur aus der Tür."),
         };
 
         /// <summary>The description for a scene, or null when we have not seen that area.</summary>
