@@ -20,6 +20,8 @@ internal static class Strings
         ["Reload"] = ("Reload speech log", "Sprechprotokoll neu laden"),
         ["Comment"] = ("Comment on the selected line", "Ausgewählte Zeile kommentieren"),
         ["Export"] = ("Export report", "Bericht exportieren"),
+        ["SaveAs"] = ("Save as...", "Speichern unter..."),
+        ["TextFiles"] = ("Text files", "Textdateien"),
         ["Follow"] = ("Follow live (jump to the newest line)", "Live folgen (zur neuesten Zeile springen)"),
         ["CommandLabel"] = ("Bridge command:", "Bridge-Befehl:"),
         ["Send"] = ("Send", "Senden"),
@@ -32,7 +34,10 @@ internal static class Strings
         ["NoLog"] = (
             "No speech log found. Switch on 'Speech log' in the mod configurator - without it the mod writes no transcript.",
             "Kein Sprechprotokoll gefunden. Schalte im Konfigurator 'Sprechprotokoll' ein — ohne das schreibt die Mod kein Transkript."),
-        ["CommentAdded"] = ("Comment added.", "Kommentar angehängt."),
+        ["CommentAdded"] = ("Comment added and saved.", "Kommentar angehängt und gespeichert."),
+        ["CommentNotSaved"] = (
+            "Comment added, but could NOT be saved: {0}. Use 'Save as...' before closing the window.",
+            "Kommentar angehängt, aber NICHT gespeichert: {0}. Nutze 'Speichern unter...', bevor du das Fenster schließt."),
     };
 
     public static string Get(string key)

@@ -28,6 +28,7 @@ internal sealed class MainForm : Form
     private readonly Button reloadButton = new();
     private readonly Button commentButton = new();
     private readonly Button exportButton = new();
+    private readonly Button saveAsButton = new();
 
     private readonly Label commandLabel = new();
     private readonly TextBox commandBox = new();
@@ -72,21 +73,28 @@ internal sealed class MainForm : Form
         followCheck.AccessibleName = Strings.Get("Follow");
         followCheck.Checked = true;
 
-        connectButton.SetBounds(12, 492, 250, 30);
+        connectButton.SetBounds(12, 492, 220, 30);
         connectButton.Text = Strings.Get("Connect");
         connectButton.Click += (_, _) => ToggleConnection();
 
-        reloadButton.SetBounds(272, 492, 200, 30);
+        reloadButton.SetBounds(242, 492, 170, 30);
         reloadButton.Text = Strings.Get("Reload");
         reloadButton.Click += (_, _) => LoadLog();
 
-        commentButton.SetBounds(482, 492, 220, 30);
+        commentButton.SetBounds(422, 492, 200, 30);
         commentButton.Text = Strings.Get("Comment");
         commentButton.Click += (_, _) => CommentOnSelection();
 
-        exportButton.SetBounds(712, 492, 158, 30);
+        exportButton.SetBounds(632, 492, 110, 30);
         exportButton.Text = Strings.Get("Export");
         exportButton.Click += (_, _) => Export();
+
+        // The report is written to send to somebody: a tester finds the bugs, someone else
+        // fixes them. Save-As lets it land on the desktop, or straight into a mail folder,
+        // instead of somewhere inside the game's install directory.
+        saveAsButton.SetBounds(752, 492, 118, 30);
+        saveAsButton.Text = Strings.Get("SaveAs");
+        saveAsButton.Click += (_, _) => SaveAs();
 
         commandLabel.SetBounds(12, 536, 120, 23);
         commandLabel.Text = Strings.Get("CommandLabel");
@@ -114,7 +122,7 @@ internal sealed class MainForm : Form
         {
             gamePathLabel, gamePathBox, browseButton,
             transcriptLabel, transcriptList, followCheck,
-            connectButton, reloadButton, commentButton, exportButton,
+            connectButton, reloadButton, commentButton, exportButton, saveAsButton,
             commandLabel, commandBox, sendButton, responseBox,
             statusLabel,
         });
@@ -150,6 +158,8 @@ internal sealed class MainForm : Form
         if (string.IsNullOrEmpty(path)) return;
 
         transcript.LoadSpeechLog(path);
+        // Comments written in an earlier session come back attached to their lines.
+        try { transcript.LoadNotes(path); } catch { /* a missing/damaged notes file is not fatal */ }
         RebuildList();
 
         Status(transcript.Lines.Count == 0 ? Strings.Get("NoLog") : Strings.Get("Loaded", transcript.Lines.Count));
@@ -222,7 +232,18 @@ internal sealed class MainForm : Form
         var index = transcriptList.SelectedIndex;
         transcriptList.Items[index] = line;   // forces the list to re-read ToString()
         transcriptList.SelectedIndex = index;
-        Status(Strings.Get("CommentAdded"));
+
+        // Straight to disk. A comment that only exists in a window is a comment that closing
+        // the window destroys - and this tool exists so that nothing has to be remembered.
+        try
+        {
+            transcript.SaveNotes(gamePathBox.Text.Trim());
+            Status(Strings.Get("CommentAdded"));
+        }
+        catch (Exception ex)
+        {
+            Status(Strings.Get("CommentNotSaved", ex.Message));
+        }
     }
 
     private void Export()
@@ -233,6 +254,33 @@ internal sealed class MainForm : Form
         try
         {
             var file = transcript.Export(path);
+            Status(Strings.Get("Exported", file));
+        }
+        catch (Exception ex)
+        {
+            Status(ex.Message);
+        }
+    }
+
+    /// <summary>The report, wherever the tester wants it - usually somewhere they can attach it to a message.</summary>
+    private void SaveAs()
+    {
+        var gamePath = gamePathBox.Text.Trim();
+
+        using var dialog = new SaveFileDialog
+        {
+            Title = Strings.Get("SaveAs"),
+            FileName = $"Disco-Bericht-{DateTime.Now:yyyy-MM-dd-HHmm}.txt",
+            Filter = Strings.Get("TextFiles") + " (*.txt)|*.txt",
+            DefaultExt = "txt",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            var file = transcript.Export(gamePath, dialog.FileName);
             Status(Strings.Get("Exported", file));
         }
         catch (Exception ex)

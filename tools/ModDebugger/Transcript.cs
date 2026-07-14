@@ -61,14 +61,58 @@ internal sealed class Transcript
         return line;
     }
 
+    private static string NotesPath(string gamePath) =>
+        Path.Combine(gamePath, "UserData", "ModDebugger-Notes.txt");
+
     /// <summary>
-    /// Writes the annotated transcript next to the speech log. Deliberately a new file:
-    /// the mod owns SpeechLog.txt and appends to it while the game runs - writing into it
-    /// from here would race the game and could lose lines.
+    /// Saves the comments the moment one is written, so closing the window never destroys
+    /// them. They used to live only in memory: a tester could annotate an hour of play, close
+    /// the window without exporting, and lose everything - and the whole point of this tool is
+    /// that a report is not written from memory.
+    ///
+    /// The line's timestamp and text are the key, so the notes survive a restart, a reload of
+    /// the speech log and any number of new lines arriving in between.
     /// </summary>
-    public string Export(string gamePath)
+    public void SaveNotes(string gamePath)
     {
-        var path = Path.Combine(gamePath, "UserData",
+        var sb = new StringBuilder();
+        foreach (var line in Lines)
+        {
+            if (string.IsNullOrEmpty(line.Comment)) continue;
+            // One record per line, tab-separated; comments cannot contain newlines (the
+            // dialog is single-line), so this stays readable and parseable.
+            sb.AppendLine($"{line.Time}\t{line.Text}\t{line.Comment}");
+        }
+
+        var path = NotesPath(gamePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
+    }
+
+    /// <summary>Re-attaches saved comments to the lines they belong to.</summary>
+    public void LoadNotes(string gamePath)
+    {
+        var path = NotesPath(gamePath);
+        if (!File.Exists(path)) return;
+
+        foreach (var raw in File.ReadAllLines(path, Encoding.UTF8))
+        {
+            var parts = raw.Split('\t');
+            if (parts.Length < 3) continue;
+
+            var line = Lines.FirstOrDefault(l => l.Time == parts[0] && l.Text == parts[1]);
+            if (line != null) line.Comment = parts[2];
+        }
+    }
+
+    /// <summary>
+    /// Writes the annotated transcript. Deliberately a separate file from SpeechLog.txt: the
+    /// mod owns that one and appends to it while the game runs - writing into it from here
+    /// would race the game and could lose lines.
+    /// </summary>
+    public string Export(string gamePath, string? targetPath = null)
+    {
+        var path = targetPath ?? Path.Combine(gamePath, "UserData",
             $"ModDebugger-Report-{DateTime.Now:yyyy-MM-dd-HHmm}.txt");
 
         var sb = new StringBuilder();
