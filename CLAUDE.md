@@ -12,6 +12,26 @@ Key technologies:
 - **Tolk**: Screen reader integration library
 - **Harmony**: Runtime method patching for game hooks
 
+## Screen Takeover & TTS Announcement Protocol (hard rule)
+
+The person testing this mod is **blind and works with a screen reader**. This changes how an AI assistant is allowed to drive the machine.
+
+**Prefer approaches that never need window focus.** This repo ships the **AI Dev Bridge** (see below) precisely so tests drive the game and the mod through the game's own systems — no keystrokes, no foreground window. Taking over a blind user's screen is the single most disruptive thing a test can do. Use the bridge (`state`, `objects`, `navigate`, `interact`, `goto`, `view`, …) instead of GUI automation whenever possible.
+
+**Never do GUI automation (SendKeys, SetForegroundWindow, focusing any window) while the user is at the machine.** Synthetic keystrokes land in the game, not your terminal, and silently disrupt what the user is doing. If the user is present, either wait until they step away, or don't automate the GUI at all — use the bridge. When in doubt whether they are present, ask first.
+
+**If a takeover is genuinely unavoidable, follow this protocol without exception:**
+
+1. **Announce first, via TTS**, that you are taking the window and that the user must not press anything.
+2. **Narrate every single action via TTS while you hold the window.** Once the game window has focus, the terminal is invisible to the user — your text output does not exist for them. Silence reads as a crash or a stall, and they will take the window back and collide with you.
+3. **Announce via TTS when you are done**, so the user knows they can work again. No "done" message means they assume you died and take over.
+
+**TTS mechanics (what actually works):** speak through **SAPI inline, backgrounded** (run the command in the background), each utterance its own command:
+```
+Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak("...")
+```
+What does **not** work: `Start-Job` (the job dies with the short-lived shell — the speech silently never happens); `Start-Process powershell -WindowStyle Hidden` (does not reach the user). **Do not announce through NVDA** here: the mod itself speaks through NVDA/Tolk, so your announcements would collide with the game's own speech. SAPI is a separate voice and stays out of the screen reader's way.
+
 ## Build Commands
 
 ### Environment Setup
