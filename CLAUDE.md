@@ -32,6 +32,27 @@ Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.Speech
 ```
 What does **not** work: `Start-Job` (the job dies with the short-lived shell — the speech silently never happens); `Start-Process powershell -WindowStyle Hidden` (does not reach the user). **Do not announce through NVDA** here: the mod itself speaks through NVDA/Tolk, so your announcements would collide with the game's own speech. SAPI is a separate voice and stays out of the screen reader's way.
 
+## Project Rules & Conventions (hard rules)
+
+These are non-negotiable and apply to every change and every release. A fresh instance that skips them produces work that has to be redone — read them before touching releases, the installer, or gameplay features.
+
+### Releases & publication
+- **No release spam.** There is exactly **one** moving `nightly` prerelease, updated **in place**, for anything untested. Versioned/stable releases are cut **only after the change has actually been play-tested in-game by the user** — never before. "Stable" means "tested": nothing new or experimental ships in a stable release. (Nightly-vs-latest mechanics: see the Installer section.)
+- **Never publish to skip a play-test.** If it hasn't been played, it isn't stable. Before proposing a fix release, verify the bug actually exists in the current stable build.
+
+### No code signing
+- **Do not buy or add a code-signing certificate.** If an AV heuristic (Defender etc.) flags a tool, fix the *behaviour* that trips it — never sign around it. Concretely: the setup exe **never unpacks executables out of itself** and **never self-extracts / drops-then-downloads** — that pattern is behaviourally indistinguishable from a dropper and got an earlier build quarantined as `Trojan:Win32/Bearfoos.B!ml`. It embeds only the Tolk natives it *speaks* with; everything else is downloaded from the GitHub release, like the mod itself.
+
+### One consistent path (delivery)
+- **One route per kind of thing.** Whatever belongs to the mod ships in the **mod release zip** and is installed from there — never embedded in the installer binary, never given a second install step of its own. A second channel is a second thing that silently falls out of step with the release. (Full rationale in the "Delivery rule" note under the Installer section.)
+
+### Global, not per-scene
+- **Key features off global runtime signals, never off hardcoded scene/level/map names.** No `if sceneName == "…"` special-casing. The same code must work everywhere the runtime signal holds — that is what keeps the mod robust across the game's areas and across game updates.
+
+### Speech output
+- **All user-facing announcements go through `TolkScreenReader.Instance.Speak()`** (screen reader + braille display). Atmospheric **orb** text and area descriptions go out on a *separate* voice via the external **orb TTS server** so they don't fight the screen-reader channel — see "Screen Reader Integration" below. Do **not** add a competing in-process voice, and record externally-spoken lines via `RecordExternalSpeech` so the transcript stays complete.
+- The AI assistant's own screen-takeover narration is a different thing — see the Screen Takeover & TTS Announcement Protocol above.
+
 ## Build Commands
 
 ### Environment Setup
