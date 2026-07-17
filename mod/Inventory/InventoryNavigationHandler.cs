@@ -537,13 +537,6 @@ namespace AccessibilityMod.Inventory
         public static float LastTabSwitchTime { get; private set; } = -10f;
 
         /// <summary>
-        /// Localized tab name plus how many items it holds ("Tab Kleidung: 4 Gegenstände.") -
-        /// the count is what tells a blind player whether the tab is worth walking through.
-        /// If the tab has items, the auto-selected first one is appended ("Ausgewählt: ...")
-        /// because its own OnSelect announcement is suppressed during a tab switch (see
-        /// LastTabSwitchTime).
-        /// </summary>
-        /// <summary>
         /// Public entry for "where am I in the inventory?" - the current tab and how many
         /// items it holds, "keine Objekte" when empty. Used by the on-demand announce key
         /// as a non-interrupting fallback when no item is focused (bug #2).
@@ -564,6 +557,13 @@ namespace AccessibilityMod.Inventory
             }
         }
 
+        /// <summary>
+        /// Localized tab name plus how many items it holds ("Tab Kleidung: 4 Gegenstände.") -
+        /// the count is what tells a blind player whether the tab is worth walking through.
+        /// If the tab has items, the auto-selected first one is appended ("Ausgewählt: ...")
+        /// because its own OnSelect announcement is suppressed during a tab switch (see
+        /// LastTabSwitchTime).
+        /// </summary>
         private static string DescribeTab(ItemTabGroup tab)
         {
             string name = Settings.Loc.Get("InvTab_" + tab);

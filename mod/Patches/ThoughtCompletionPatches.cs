@@ -23,23 +23,29 @@ namespace AccessibilityMod.Patches
     /// mod's world navigation does not go through the UI) but every interaction was
     /// swallowed by the invisible modal - "I can walk but not interact".
     ///
-    /// Three patches fix the three halves of that experience:
-    ///  1. AnnounceSplash (via SetProject + OnEnable): read EVERYTHING the splash shows -
-    ///     title, completion description, and the bonus list - not just the name.
+    /// Two things happen here:
+    ///  1. AnnounceSplash (via the SetProject + OnEnable patches below): read EVERYTHING
+    ///     the splash shows - title, the thought's own musing text, completion effect and
+    ///     the bonus list - not just the name.
     ///  2. OnEnable additionally puts the keyboard selection on the game's own close
     ///     button, so Enter leaves the screen the same way a mouse click would.
-    ///  3. ThoughtSlot.OnSelect: while browsing the cabinet, each selected thought tells
-    ///     its full story (name, state, description, research time) - "what the cabinet
-    ///     says about the thought", as requested.
+    ///
+    /// The third half - "what the cabinet says about the thought" while BROWSING the
+    /// cabinet - is deliberately NOT a patch here: ThoughtSlot.OnSelect is a virtual
+    /// Il2Cpp method whose patching crashes the game (see the NOTE at the bottom of this
+    /// file), so that narration lives in ThoughtCabinetNavigationHandler.CheckSelectedThought
+    /// as a per-frame EventSystem poll instead.
     /// </summary>
     public static class ThoughtSplashAnnouncer
     {
         // SetProject and OnEnable both run when the splash opens (order depends on the
-        // game's flow), and both call in here - the window keeps the player from hearing
-        // the same splash twice while still allowing a re-announcement when the game
-        // legitimately shows another thought right after (tabbing through multiple
-        // completed thoughts uses ChangeShownThought -> SetProject again).
-        private static string lastAnnounced = "";
+        // game's flow), and both call in here. Dedup on the THOUGHT, not on the rendered
+        // text: the two calls can read the panel labels at different render stages, so
+        // the text can differ even though it is the same thought - keying on text would
+        // let that difference slip through and announce the same result twice. A
+        // genuinely different thought (tabbing to another completed one via
+        // ChangeShownThought -> SetProject) has a different key and re-announces.
+        private static string lastAnnouncedThought = "";
         private static float lastAnnouncedTime;
 
         public static void AnnounceSplash(ThoughtSplashScreenView view)
@@ -88,9 +94,12 @@ namespace AccessibilityMod.Patches
 
                 string announcement = string.Join(" ", parts);
 
-                // Same-text-within-2s = the second patch of the pair firing, not new info.
-                if (announcement == lastAnnounced && UnityEngine.Time.unscaledTime - lastAnnouncedTime < 2f) return;
-                lastAnnounced = announcement;
+                // Same thought within 2s = the second patch of the pair firing (or the
+                // game re-running SetProject), not new info. Keyed on the thought's own
+                // name, so a differently-rendered-but-same thought is still deduped.
+                string thoughtKey = project.displayName ?? "";
+                if (thoughtKey == lastAnnouncedThought && UnityEngine.Time.unscaledTime - lastAnnouncedTime < 2f) return;
+                lastAnnouncedThought = thoughtKey;
                 lastAnnouncedTime = UnityEngine.Time.unscaledTime;
 
                 // Interrupting on purpose: this is a modal takeover the player must

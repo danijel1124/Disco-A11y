@@ -246,8 +246,8 @@ namespace AccessibilityMod.Input
                     Inventory.InventoryNavigationHandler.Instance.SwitchTab(backward: false);
             }
 
-            // Healing keys (Ctrl+Plus health, Shift+Plus morale). Same base key, disjoint
-            // modifiers - if both are held, health wins deterministically.
+            // Healing keys (Ctrl+1 health, Ctrl+2 morale). Distinct base keys, so the
+            // else-if is only a tidy "one heal per frame" guard, not a tie-breaker.
             if (KeyBindings.IsPressed(GameKey.HealHealth))
             {
                 Patches.HealingKeyActions.HealHealth();
@@ -305,11 +305,25 @@ namespace AccessibilityMod.Input
                     MelonLogger.Warning($"[THOUGHT] buttonClose invoke failed: {inner.Message}");
                 }
 
-                // The transition must go through the ViewController INSTANCE, exactly
-                // like the dev bridge's working "view CLEAR" command. Calling
-                // View.SwitchToView(ViewType) on the splash itself does nothing - that
-                // is the callback the controller fires, not the initiator (verified
-                // live 17.07.2026: handler ran, view stayed open).
+                // Only FORCE the exit if the button's own handler did not already leave
+                // the splash. Live-verified, the button click alone keeps the view on the
+                // splash (that is why the forced switch exists) - but if a future/other
+                // flow (e.g. the splash opened from inside the thought cabinet) navigates
+                // back on its own, forcing CLEAR here would override that and eject the
+                // player to gameplay. So: re-check the view, and only push CLEAR if we are
+                // still stuck on the splash.
+                var after = Il2CppSunshine.Views.ViewController.GetCurrentView();
+                if (after == null || after.GetViewType() != Il2CppSunshine.Views.ViewType.THOUGHTSPLASHSCREEN)
+                {
+                    // The button's own close already took us somewhere - leave it be.
+                    MelonLogger.Msg("[THOUGHT] Splash closed by its own button");
+                    return true;
+                }
+
+                // Still on the splash: force the exit through the ViewController INSTANCE,
+                // exactly like the dev bridge's working "view CLEAR" command. Calling
+                // View.SwitchToView(ViewType) on the splash itself does nothing - that is
+                // the callback the controller fires, not the initiator.
                 var controller = UnityEngine.Object.FindObjectOfType<Il2CppSunshine.Views.ViewController>();
                 var clearView = controller?.GetViewByType(Il2CppSunshine.Views.ViewType.CLEAR);
                 if (controller == null || clearView == null)

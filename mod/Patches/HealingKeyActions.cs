@@ -12,9 +12,12 @@ namespace AccessibilityMod.Patches
     /// healing charge from a carried healing item. Both buttons are mouse-only: no game
     /// key reaches them, so a keyboard player could carry medicine and never use it.
     ///
-    /// Ctrl+Plus heals health (Endurance pool), Shift+Plus heals morale (Volition pool).
-    /// The keys drive the game's own HealingButton.ApplyHeal - the same code path as the
-    /// click, so all game rules (charge consumption, animations, notifications) apply.
+    /// Ctrl+1 heals health (Endurance pool), Ctrl+2 heals morale (Volition pool) - the
+    /// bindings are remappable; these are the defaults. (KeyCode.Plus was the first
+    /// choice but never fired on a German QWERTZ layout, so healing moved to digits,
+    /// which fire on every layout - see KeyBindings.) The keys drive the game's own
+    /// HealingButton.ApplyHeal - the same code path as the click, so all game rules
+    /// (charge consumption, animations, notifications) apply.
     /// </summary>
     public static class HealingKeyActions
     {

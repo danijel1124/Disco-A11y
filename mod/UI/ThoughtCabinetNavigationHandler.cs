@@ -75,8 +75,9 @@ namespace AccessibilityMod.UI
                     : DescribeEmptySlot(slot.gameObject);
 
                 if (string.IsNullOrEmpty(announcement)) return;
-                // Same-text guard: the game re-fires selection events for one move.
-                if (announcement == lastSlotAnnouncement && selected == lastSelectedSlotObject) return;
+                // Same-text guard: the game re-fires selection events for one move, and
+                // two adjacent slots can format identically (e.g. two empty/locked slots).
+                if (announcement == lastSlotAnnouncement) return;
                 lastSlotAnnouncement = announcement;
 
                 TolkScreenReader.Instance.Speak(announcement, true);
@@ -271,14 +272,6 @@ namespace AccessibilityMod.UI
                 return null;
             }
         }
-
-        /// <summary>
-        /// Public entry for the ThoughtSlot.OnSelect patch (ThoughtCompletionPatches):
-        /// keeps the formatting in ONE place so the cabinet browsing announcement and
-        /// the Tab-key detail reading can never drift apart.
-        /// </summary>
-        public static string FormatThoughtProjectDetailsPublic(ThoughtCabinetProject thoughtProject)
-            => FormatThoughtProjectDetails(thoughtProject);
 
         /// <summary>
         /// Announcement for a cabinet slot without a thought: "empty" alone would hide
