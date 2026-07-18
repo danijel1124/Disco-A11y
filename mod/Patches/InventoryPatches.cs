@@ -147,28 +147,41 @@ namespace AccessibilityMod.Patches
     [HarmonyPatch(typeof(Il2Cpp.InventoryHighlighter), "UnityEngine_EventSystems_ISelectHandler_OnSelect")]
     public static class InventoryHighlighter_OnSelect_Patch
     {
-        // The game fires OnSelect twice per selection (~30 ms apart), so every slot was
-        // announced twice - verified live and all over the player's speech log. The two
-        // calls are indistinguishable at this level, so the fix is a short repeat window:
-        // the same text within half a second is the double-fire, not a new selection.
-        // (Re-selecting the same slot later still announces - that takes > 0.5 s.)
+        // The game fires OnSelect twice per selection (~30 ms apart) ON THE SAME CELL,
+        // so every slot was announced twice - verified live and all over the player's
+        // speech log. The repeat guard is keyed on text AND cell identity (PR review
+        // finding 7, Jana's decision): same text from a DIFFERENT cell is a real move -
+        // two adjacent empty cells both saying "leer", or two same-named items - and
+        // must speak; only the technical double-fire of one cell stays silent.
+        // (Re-selecting the same cell later still announces - that takes > 0.5 s.)
         private static string lastSpoken = "";
+        private static int lastSpokenCellId;
         private static float lastSpokenTime;
 
-        private static void AnnounceOnce(string text)
+        private static void AnnounceOnce(string text, UnityEngine.GameObject cell)
         {
             if (string.IsNullOrEmpty(text)) return;
-            if (text == lastSpoken && UnityEngine.Time.unscaledTime - lastSpokenTime < 0.5f) return;
 
-            // Right after a tab switch the game auto-selects the new tab's first item.
+            int cellId = cell != null ? cell.GetInstanceID() : 0;
+            if (text == lastSpoken && cellId == lastSpokenCellId
+                && UnityEngine.Time.unscaledTime - lastSpokenTime < 0.5f) return;
+
+            // Recorded BEFORE the tab-switch check on purpose: the suppressed
+            // auto-select announcement must still land in the double-fire guard, so its
+            // ~30 ms twin dies there instead of speaking.
+            lastSpoken = text;
+            lastSpokenCellId = cellId;
+            lastSpokenTime = UnityEngine.Time.unscaledTime;
+
+            // Right after a tab switch the game auto-selects the new tab's first cell.
             // Its announcement and the tab announcement would interrupt each other (both
             // speak with interrupt=true, 40 ms apart - the player hears neither in
             // full). The tab announcement already contains the first item's name
-            // ("Ausgewählt: ..."), so this one stays silent inside the window.
-            if (UnityEngine.Time.unscaledTime - InventoryNavigationHandler.LastTabSwitchTime < 0.6f) return;
+            // ("Ausgewählt: ..."), so exactly this ONE announcement is consumed - a
+            // one-shot flag, not a time window (PR review finding 5, Jana's decision:
+            // every real move right after the switch speaks).
+            if (InventoryNavigationHandler.ConsumeTabSwitchSuppression()) return;
 
-            lastSpoken = text;
-            lastSpokenTime = UnityEngine.Time.unscaledTime;
             TolkScreenReader.Instance.Speak(text, true);
         }
 
@@ -188,7 +201,7 @@ namespace AccessibilityMod.Patches
                 // back as "Gloves: empty" from the helper - each of those is a distinct
                 // place, so the full wording answers a real question there.
                 string text = InventoryHighlighterHelper.GetSelectionText(__instance.gameObject);
-                AnnounceOnce(text == "" ? Settings.Loc.Get("InvSlotEmpty") : text);
+                AnnounceOnce(text == "" ? Settings.Loc.Get("InvSlotEmpty") : text, __instance.gameObject);
             }
             catch (Exception ex)
             {

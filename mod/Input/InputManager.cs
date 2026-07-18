@@ -527,12 +527,18 @@ namespace AccessibilityMod.Input
                 {
                     var currentSelection = eventSystem.currentSelectedGameObject;
 
-                    // In the inventory the focused object is an InventoryHighlighter slot,
-                    // which the GENERIC UI formatter cannot read - only the inventory path
-                    // can. Without this, pressing "announce current selection" over an
+                    // In the inventory the focused object is usually an InventoryHighlighter
+                    // slot, which the GENERIC UI formatter cannot read - only the inventory
+                    // path can. Without this, pressing "announce current selection" over an
                     // item said "Current selection has no text" and, being interrupting,
                     // beheaded the tab/count announcement (bug #2). Try the inventory
-                    // resolver first whenever the inventory screen is open.
+                    // resolver first whenever the inventory screen is open. Its three-way
+                    // answer routes three ways (PR review finding 6, Jana's decision):
+                    //   text  -> a real item / equipment slot: read it.
+                    //   ""    -> an EMPTY grid slot: say where we are (tab + count).
+                    //   null  -> NOT an inventory slot (a button, a header): fall through
+                    //            to the generic UI reader below, which knows how to read
+                    //            it - the tab summary would describe the wrong thing.
                     if (Inventory.InventoryNavigationHandler.IsInventoryViewOpen)
                     {
                         string itemText = currentSelection == null
@@ -541,19 +547,22 @@ namespace AccessibilityMod.Input
 
                         if (!string.IsNullOrEmpty(itemText))
                         {
-                            // A real item (or an equipment slot's "empty") - read it.
                             TolkScreenReader.Instance.Speak(itemText, true);
                             MelonLogger.Msg($"[ON-DEMAND] Inventory selection: {itemText}");
                             return;
                         }
 
-                        // itemText == "" (empty grid slot) or null (nothing focused yet):
-                        // say where we are instead of "no text", and do it NON-interrupting
-                        // (Danijel's option 2) so it never cuts off the tab announcement.
-                        // "keine Objekte" when the tab is empty.
-                        TolkScreenReader.Instance.Speak(
-                            Inventory.InventoryNavigationHandler.DescribeCurrentTab(), false);
-                        return;
+                        if (itemText == "" || currentSelection == null)
+                        {
+                            // Empty grid slot / nothing focused yet: say where we are, and
+                            // do it NON-interrupting (Danijel's option 2) so it never cuts
+                            // off the tab announcement. "keine Objekte" when the tab is
+                            // empty.
+                            TolkScreenReader.Instance.Speak(
+                                Inventory.InventoryNavigationHandler.DescribeCurrentTab(), false);
+                            return;
+                        }
+                        // itemText == null with a focused object: not ours - fall through.
                     }
 
                     if (currentSelection != null)

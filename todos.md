@@ -13,9 +13,9 @@ Status der 10 verifizierten Findings + Aufräumliste (Details im PR-Kommentar):
 - [x] **1 Heilen weg von Strg+1/2 (Story-Risiko im Dialog)** — jetzt Strg+H/Shift+H (Janas Wahl), siehe J2.
 - [x] **2+4 Splash-Check zu spät im InputManager** — Check jetzt ganz vorn: vor der Dialog-Sperre (Splash kann mitten in einer Conversation aufgehen) und vor der Interakt-Kette (kein Autowalk hinters Modal mehr).
 - [x] **3 Globaler Interrupt köpft Forschungsergebnis** — Hinweis+Inhalt sind EINE Ansage; Screen-Name des Splash geht über neues `SpeakNeverInterrupt` (echte Queue-Garantie trotz F11-Setting).
-- [ ] **5 0,6-s-Tab-Fenster verschluckt echte Moves** — Lösungswahl liegt bei Jana (Umfrage).
-- [ ] **6 Ansage-Taste erreicht Nicht-Slot-Controls im Inventar nicht** — Erklärung an Jana, Entscheidung offen.
-- [ ] **7 0,5-s-Gleichtext-Dedup macht Nachbarzellen stumm** — Erklärung an Jana, Entscheidung offen.
+- [x] **5 0,6-s-Tab-Fenster verschluckt echte Moves** — Janas Wahl (Umfrage 18.07.): **Einmal-Flag** statt Zeitfenster. Nur die eine Auto-Auswahl-Ansage nach dem Tab-Wechsel wird verbraucht (ihr 30-ms-Doppelfeuer stirbt im Dedup), jede echte Bewegung spricht sofort; 1-s-Verfalls-Backstop, falls die Auto-Auswahl ausbleibt.
+- [x] **6 Ansage-Taste erreicht Nicht-Slot-Controls im Inventar nicht** — Janas Okay: `null` vom Inventar-Auflöser (kein Slot, z. B. Button) fällt wieder in den generischen UI-Vorleser durch; Tab-Zusammenfassung nur noch bei leerer Zelle / ohne Fokus.
+- [x] **7 0,5-s-Gleichtext-Dedup macht Nachbarzellen stumm** — Janas Okay: Dedup zusätzlich an der Zellen-Identität (InstanceID). Zwei gleichnamige Nachbarzellen („leer"/„leer") sprechen beide; nur das technische Doppelfeuer derselben Zelle bleibt stumm.
 - [x] **8 Kabinett-Wiederbetreten stumm** — beide Merkfelder werden zurückgesetzt.
 - [x] **9 FindObjectOfType-Polling pro Frame** — Kabinett-Check läuft jetzt über `ViewController.GetCurrentView()` (THCPage-Zweig war DiscoPages-Totcode), ein Check pro Frame.
 - [x] **10 Hartes Enter am Splash** — neuer remappbarer `GameKey.CloseSplash` (Default Enter) in allen Presets + Katalog; Hinweistext nennt die Live-Bindung.

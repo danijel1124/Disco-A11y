@@ -523,15 +523,37 @@ namespace AccessibilityMod.Inventory
             }
         }
 
+        // One-shot suppression of the auto-select announcement after a tab switch.
+        // The game auto-selects the new tab's first cell right after SwitchTab, and its
+        // OnSelect announcement would collide with the tab announcement, which already
+        // carries the first item's name (both interrupt -> the player hears only 40 ms
+        // of one of them, verified live 17.07.2026). A 0.6 s TIME WINDOW sat here
+        // before and swallowed EVERY announcement inside it - including the user's own
+        // fast arrow moves right after the switch (PR review finding 5; Jana's pick:
+        // one-shot flag). The timestamp is only a staleness backstop: should the
+        // auto-select ever not fire, an armed flag must not lie in wait and swallow the
+        // user's next real move much later.
+        private static bool suppressNextSelectAnnouncement;
+        private static float suppressArmedTime;
+
+        /// <summary>Arm the one-shot suppression - called by SwitchTab only.</summary>
+        private static void ArmTabSwitchSuppression()
+        {
+            suppressNextSelectAnnouncement = true;
+            suppressArmedTime = UnityEngine.Time.unscaledTime;
+        }
+
         /// <summary>
-        /// Set by SwitchTab just before the game refreshes the panel. The game then
-        /// auto-selects the first item of the new tab, whose OnSelect announcement would
-        /// collide with the tab announcement (both interrupt -> the player hears only
-        /// 40 ms of one of them, verified live 17.07.2026). The OnSelect patch checks
-        /// this timestamp and stays silent inside the window; the first item's name is
-        /// folded into the tab announcement below instead - ONE utterance, nothing lost.
+        /// True exactly once per tab switch: for the first OnSelect announcement after
+        /// arming (the game's auto-select). A stale flag (no auto-select within 1 s)
+        /// reports false, so a late real move is never swallowed.
         /// </summary>
-        public static float LastTabSwitchTime { get; private set; } = -10f;
+        public static bool ConsumeTabSwitchSuppression()
+        {
+            if (!suppressNextSelectAnnouncement) return false;
+            suppressNextSelectAnnouncement = false;
+            return UnityEngine.Time.unscaledTime - suppressArmedTime < 1f;
+        }
 
         /// <summary>
         /// THE tab order - the panel's left-to-right order, which is also how the game's
@@ -679,11 +701,11 @@ namespace AccessibilityMod.Inventory
                 int next = (manager.CurrentTab + (backward ? tabCount - 1 : 1)) % tabCount;
 
                 manager.CurrentTab = next;
-                // Opens the suppression window BEFORE the refresh below: the game's
+                // Arm the one-shot suppression BEFORE the refresh below: the game's
                 // auto-select of the new tab's first item fires inside
                 // UpdateCurrentlySelectedTab, and its OnSelect announcement must stay
                 // silent (the tab announcement already carries the item's name).
-                LastTabSwitchTime = UnityEngine.Time.unscaledTime;
+                ArmTabSwitchSuppression();
                 // The game's own refresh: repaints the grid for the new tab and fires our
                 // UpdateCurrentlySelectedTab patch, which announces "Tab Kleidung: 4
                 // Gegenstände. Ausgewählt: ..." - so there is no separate announcement here.
