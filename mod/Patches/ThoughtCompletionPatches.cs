@@ -91,6 +91,14 @@ namespace AccessibilityMod.Patches
                     parts.Add(RTLHelper.FixForScreenReader(view.propertiesText.text.Replace("\n", ". ").Trim()));
                 }
 
+                // The exit hint is PART of the same utterance, not a second Speak call:
+                // a queued follow-up line gets promoted to interrupting when the player's
+                // global speech-interrupt setting is on, and beheaded the whole result
+                // read after ~0 ms (PR review finding 3). One utterance cannot interrupt
+                // itself. The hint renders the LIVE binding (finding 10) - remapping the
+                // key updates the spoken text automatically.
+                parts.Add(Loc.Get("SplashCloseHint", KeyBindings.SpeakableName(GameKey.CloseSplash)));
+
                 string announcement = string.Join(" ", parts);
 
                 // Same thought within 2s = the second patch of the pair firing (or the
@@ -103,9 +111,8 @@ namespace AccessibilityMod.Patches
 
                 // Interrupting on purpose: this is a modal takeover the player must
                 // acknowledge - exactly the moment to stop whatever else was talking.
+                // (Content + exit hint travel in this ONE call, see above.)
                 TolkScreenReader.Instance.Speak(announcement, true);
-                // Queued (interrupt: false) so the exit hint reads AFTER the content.
-                TolkScreenReader.Instance.Speak(Loc.Get("SplashCloseHint"), false);
                 MelonLogger.Msg($"[THOUGHT] Splash announced: {project.displayName}");
             }
             catch (Exception ex)

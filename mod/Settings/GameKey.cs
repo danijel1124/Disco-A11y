@@ -72,5 +72,10 @@ namespace AccessibilityMod.Settings
 
         /// <summary>Consume a morale healing charge (the plus button on the morale bar).</summary>
         HealMorale,
+
+        /// <summary>Close the thought-research splash screen (whose own close button is
+        /// mouse-only). Was hardcoded Enter at first - made remappable because EVERY mod
+        /// hotkey must be a GameKey, visible to the configurator (PR review finding 10).</summary>
+        CloseSplash,
     }
 }

@@ -113,6 +113,20 @@ namespace AccessibilityMod
         }
 
         /// <summary>
+        /// Speaks with a real QUEUE guarantee: never interrupts, not even when the
+        /// player's global speech-interrupt setting (F11, persisted) is on. Speak(text,
+        /// interrupt: false) does NOT give that guarantee - SendSpeech promotes queued
+        /// lines to interrupting under the global setting, so a follow-up line beheaded
+        /// the long announcement it was meant to trail (PR review finding 3: the
+        /// research-result read was never heard past ~0 ms). Use this for lines whose
+        /// entire point is to come AFTER something else.
+        /// </summary>
+        public bool SpeakNeverInterrupt(string text, AnnouncementCategory category = AnnouncementCategory.Immediate, Audio.AnnouncementSource source = Audio.AnnouncementSource.Other)
+        {
+            return SendSpeech(text, false, true, category, source, allowGlobalInterrupt: false);
+        }
+
+        /// <summary>
         /// Fires once per line at the moment it actually goes to the screen reader - the
         /// single source of truth for "what did the player hear?", shared by the transcript,
         /// the dev bridge and any debugging tool.
@@ -187,7 +201,7 @@ namespace AccessibilityMod
             MelonLogger.Msg(sb.ToString());
         }
 
-        private bool SendSpeech(string text, bool interrupt, bool respectSuppression, AnnouncementCategory category = AnnouncementCategory.Immediate, Audio.AnnouncementSource source = Audio.AnnouncementSource.Other)
+        private bool SendSpeech(string text, bool interrupt, bool respectSuppression, AnnouncementCategory category = AnnouncementCategory.Immediate, Audio.AnnouncementSource source = Audio.AnnouncementSource.Other, bool allowGlobalInterrupt = true)
         {
             if (!isInitialized || string.IsNullOrEmpty(text)) return false;
             if (respectSuppression && suppressAnnouncements) return false;
@@ -212,9 +226,12 @@ namespace AccessibilityMod
                 SpeechLog.Write(text);
                 RaiseSpoken(text);
 
-                // Immediate announcement - speak right away
-                // Apply global interrupt setting - if enabled, always interrupt
-                bool effectiveInterrupt = interrupt || globalInterruptEnabled;
+                // Immediate announcement - speak right away.
+                // The global interrupt setting promotes queued lines to interrupting -
+                // EXCEPT for callers that need a genuine queue guarantee (a follow-up
+                // line must never behead the announcement it trails, see
+                // SpeakNeverInterrupt).
+                bool effectiveInterrupt = interrupt || (allowGlobalInterrupt && globalInterruptEnabled);
                 return Tolk.Output(text, effectiveInterrupt);
             }
         }

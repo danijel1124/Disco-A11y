@@ -95,10 +95,15 @@ namespace AccessibilityMod.UI
             string announcement = string.IsNullOrEmpty(extra) ? title : $"{title}. {extra}";
             // The thought splash announces its full research result the moment it opens
             // (ThoughtCompletionPatches) - a long, interrupting read. The screen NAME
-            // must queue behind it, not behead it after 300 ms. Every other screen keeps
+            // must queue behind it, not behead it after 300 ms - and it needs the REAL
+            // queue guarantee: Speak(interrupt: false) gets promoted to interrupting
+            // when the player's global speech-interrupt setting is on and would still
+            // cut the result read (PR review finding 3). Every other screen keeps
             // interrupting: there the name IS the primary information.
-            bool interrupt = viewType != ViewType.THOUGHTSPLASHSCREEN;
-            TolkScreenReader.Instance.Speak(announcement, interrupt);
+            if (viewType == ViewType.THOUGHTSPLASHSCREEN)
+                TolkScreenReader.Instance.SpeakNeverInterrupt(announcement);
+            else
+                TolkScreenReader.Instance.Speak(announcement, true);
             MelonLogger.Msg($"[SCREEN] Opened: {viewType} -> {announcement}");
         }
 

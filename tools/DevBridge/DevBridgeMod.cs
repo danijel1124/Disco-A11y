@@ -604,15 +604,9 @@ namespace DevBridge
                         catch { /* some enum values are not real slots */ }
                     }
 
-                    try
-                    {
-                        var pc = UnityEngine.Object.FindObjectOfType<Il2CppSunshine.Metric.PlayerCharacter>();
-                        if (pc != null && pc.healingPools != null)
-                        {
-                            sb.AppendLine($"healing charges: health={pc.healingPools.GetHealingChargetsForSkill(Il2CppSunshine.Metric.SkillType.ENDURANCE)}, morale={pc.healingPools.GetHealingChargetsForSkill(Il2CppSunshine.Metric.SkillType.VOLITION)}");
-                        }
-                    }
-                    catch (Exception ex) { sb.AppendLine("healing charges: ERR " + ex.Message); }
+                    // The mod's own shared charge lookup (-1 = pools unreadable), so the
+                    // bridge reports exactly what the healing keys will see.
+                    sb.AppendLine($"healing charges: health={HealingKeyActions.GetCharges(Il2CppSunshine.Metric.SkillType.ENDURANCE)}, morale={HealingKeyActions.GetCharges(Il2CppSunshine.Metric.SkillType.VOLITION)} (-1 = unreadable)");
 
                     // Which slot objects exist in the open UI, and can navigation reach them?
                     var highlighters = UnityEngine.Object.FindObjectsOfType<Il2Cpp.InventoryHighlighter>();
@@ -772,7 +766,7 @@ namespace DevBridge
                     // unattended sessions only. Hooking the game's input instead is not an
                     // option (see OnInitializeMelon). The mod's own hotkeys have a clean
                     // path and use "modkey".
-                    if (parts.Length < 2) return "usage: key <i|ctrl+plus|ctrl+shift+tab|escape|...> (steals window focus)";
+                    if (parts.Length < 2) return "usage: key <i|ctrl+h|ctrl+shift+tab|escape|...> (steals window focus)";
                     FocusGameWindow();
                     if (!TryPressKey(parts[1], out var error)) return error;
                     return $"pressed {parts[1]} (game window was focused)";
@@ -1219,9 +1213,10 @@ namespace DevBridge
                 ["escape"] = 0x1B, ["tab"] = 0x09, ["space"] = 0x20, ["return"] = 0x0D, ["enter"] = 0x0D,
                 ["up"] = 0x26, ["down"] = 0x28, ["left"] = 0x25, ["right"] = 0x27,
                 // "plus" = the main-keyboard +/= key (VK_OEM_PLUS); "keypadplus" = the
-                // numpad +. Needed to reproduce the healing keys (Ctrl+Plus / Shift+Plus)
-                // over REAL keystrokes, which is the only way to catch a layout mismatch
-                // that "modkey" (which bypasses the keyboard entirely) cannot see.
+                // numpad +. These stay mapped for layout experiments even though healing
+                // moved off Plus long ago (QWERTZ never fired it; healing is Ctrl+H /
+                // Shift+H now): pressing REAL keystrokes is the only way to catch a
+                // layout mismatch that "modkey" (which bypasses the keyboard) cannot see.
                 ["plus"] = 0xBB, ["keypadplus"] = 0x6B, ["kpplus"] = 0x6B,
                 ["home"] = 0x24, ["end"] = 0x23, ["pageup"] = 0x21, ["pagedown"] = 0x22,
             };

@@ -69,15 +69,12 @@ namespace AccessibilityMod.Inventory
         {
             try
             {
-                // Check for InventoryView or InventoryPage active in scene
-                var inventoryView = UnityEngine.Object.FindObjectOfType<InventoryView>();
-                var inventoryPage = UnityEngine.Object.FindObjectOfType<InventoryPage>();
-                var inventoryItemsPage = UnityEngine.Object.FindObjectOfType<InventoryItemsPage>();
-
+                // One source of truth for "is the inventory open?": the ViewController
+                // (PR review cleanup - this poll used to run three FindObjectOfType scene
+                // scans per frame AND could disagree with IsInventoryViewOpen, which the
+                // key handling already trusted).
                 bool wasOpen = isInventoryOpen;
-                isInventoryOpen = (inventoryView != null && inventoryView.gameObject.activeInHierarchy) ||
-                                 (inventoryPage != null && inventoryPage.gameObject.activeInHierarchy) ||
-                                 (inventoryItemsPage != null && inventoryItemsPage.gameObject.activeInHierarchy);
+                isInventoryOpen = IsInventoryViewOpen;
 
                 // Announce state changes
                 if (isInventoryOpen && !wasOpen)
@@ -537,6 +534,20 @@ namespace AccessibilityMod.Inventory
         public static float LastTabSwitchTime { get; private set; } = -10f;
 
         /// <summary>
+        /// THE tab order - the panel's left-to-right order, which is also how the game's
+        /// InventoryManager.CurrentTab int counts. Single source of truth: SwitchTab,
+        /// DescribeCurrentTab and the CurrentTab->enum mapping in InventoryPatches all
+        /// derive from this one array (it used to be encoded four times; PR review
+        /// cleanup).
+        /// </summary>
+        internal static readonly ItemTabGroup[] TabOrder =
+            { ItemTabGroup.TOOLS, ItemTabGroup.CLOTHES, ItemTabGroup.PAWNABLES, ItemTabGroup.READING };
+
+        /// <summary>The game's CurrentTab int as an ItemTabGroup, clamped to a valid tab.</summary>
+        internal static ItemTabGroup TabFromIndex(int index) =>
+            TabOrder[index >= 0 && index < TabOrder.Length ? index : 0];
+
+        /// <summary>
         /// Public entry for "where am I in the inventory?" - the current tab and how many
         /// items it holds, "keine Objekte" when empty. Used by the on-demand announce key
         /// as a non-interrupting fallback when no item is focused (bug #2).
@@ -546,14 +557,14 @@ namespace AccessibilityMod.Inventory
             try
             {
                 var manager = Il2CppSunshine.InventoryManager.Singleton;
-                ItemTabGroup[] order = { ItemTabGroup.TOOLS, ItemTabGroup.CLOTHES, ItemTabGroup.PAWNABLES, ItemTabGroup.READING };
-                int idx = manager != null ? manager.CurrentTab : 0;
-                if (idx < 0 || idx >= order.Length) idx = 0;
-                return DescribeTab(order[idx]);
+                return DescribeTab(TabFromIndex(manager != null ? manager.CurrentTab : 0));
             }
-            catch
+            catch (Exception ex)
             {
-                return Settings.Loc.Get("InvNoItems");
+                // Say honestly that the tab is unreadable - "no items" here would sell an
+                // interop error as an empty inventory (PR review cleanup).
+                MelonLogger.Warning($"[Inventory] DescribeCurrentTab failed: {ex.Message}");
+                return Settings.Loc.Get("InvTabReadError");
             }
         }
 
@@ -568,6 +579,7 @@ namespace AccessibilityMod.Inventory
         {
             string name = Settings.Loc.Get("InvTab_" + tab);
             int count = 0;
+            bool countReadable = false;
             string firstItem = null;
             try
             {
@@ -576,28 +588,51 @@ namespace AccessibilityMod.Inventory
                 if (tabs != null && tabs.ContainsKey(tab) && tabs[tab] != null)
                 {
                     count = tabs[tab].Count;
+                    countReadable = true;
 
                     // Slot indices are contiguous from 0 (the game compacts them), so
-                    // slot 0 is the item the game auto-selects after a tab switch. The
-                    // library resolves the internal key ("gloves_garden") to the
-                    // localized display name ("Gelbe Gartenhandschuhe").
-                    if (count > 0 && tabs[tab].ContainsKey(0))
+                    // slot 0 is normally the item the game auto-selects after a tab
+                    // switch - but guard against a hole at 0 by falling back to the
+                    // lowest occupied slot (PR review cleanup).
+                    if (count > 0)
                     {
-                        var library = data.GetLibrary();
-                        var item = library?.GetByName(tabs[tab][0]);
-                        firstItem = item != null && !string.IsNullOrEmpty(item.displayName)
-                            ? RTLHelper.FixForScreenReader(item.displayName)
-                            : tabs[tab][0];
+                        int firstSlot = int.MaxValue;
+                        if (tabs[tab].ContainsKey(0))
+                        {
+                            firstSlot = 0;
+                        }
+                        else
+                        {
+                            foreach (var slotIndex in tabs[tab].Keys)
+                            {
+                                if (slotIndex < firstSlot) firstSlot = slotIndex;
+                            }
+                        }
+                        if (firstSlot != int.MaxValue)
+                        {
+                            // The library resolves the internal key ("gloves_garden") to
+                            // the localized display name ("Gelbe Gartenhandschuhe"), with
+                            // the shared listName/raw-key fallback chain.
+                            firstItem = Patches.InventoryHighlighterHelper.GetItemDisplayName(
+                                tabs[tab][firstSlot], data);
+                        }
                     }
                 }
             }
-            catch { /* count stays 0 - still announce the tab name */ }
+            catch (Exception ex)
+            {
+                // Logged, and the announcement stays NEUTRAL below: claiming "no items"
+                // on an interop error would sell a full tab as empty (PR review cleanup).
+                MelonLogger.Warning($"[Inventory] DescribeTab({tab}) failed: {ex.Message}");
+            }
 
-            // "keine Objekte" for an empty tab (Danijel's option 2), a real count
-            // otherwise.
-            string text = count == 0
-                ? Settings.Loc.Get("InvTabEmpty", name)
-                : Settings.Loc.Get(count == 1 ? "InvTabWithCountOne" : "InvTabWithCount", name, count);
+            // "keine Objekte" for an empty tab (Danijel's option 2), a real count when we
+            // have one, only the tab name when the count could not be read.
+            string text = !countReadable
+                ? Settings.Loc.Get("InvTabNoCount", name)
+                : count == 0
+                    ? Settings.Loc.Get("InvTabEmpty", name)
+                    : Settings.Loc.Get(count == 1 ? "InvTabWithCountOne" : "InvTabWithCount", name, count);
             if (!string.IsNullOrEmpty(firstItem))
             {
                 text += Settings.Loc.Get("InvTabFirstItem", firstItem);
@@ -626,18 +661,21 @@ namespace AccessibilityMod.Inventory
             try
             {
                 // Singleton exists for the whole session; the VIEW gate (is the inventory
-                // actually open?) sits in InputManager, not here.
+                // actually open?) sits in InputManager, not here. So a null manager with
+                // the inventory OPEN is an internal error - the message says
+                // "unavailable", not "open the inventory first" (which would be wrong
+                // advice in the only state this line can play; PR review cleanup).
                 var manager = Il2CppSunshine.InventoryManager.Singleton;
                 if (manager == null)
                 {
-                    TolkScreenReader.Instance.Speak(Settings.Loc.Get("InvTabOnlyInInventory"), true);
+                    MelonLogger.Warning("[Inventory] SwitchTab: InventoryManager.Singleton is null with the inventory open");
+                    TolkScreenReader.Instance.Speak(Settings.Loc.Get("InvTabUnavailable"), true);
                     return;
                 }
 
-                // Tab indices 0..3 = TOOLS, CLOTHES, PAWNABLES, READING - the panel's
-                // left-to-right order, same mapping the ItemTabGroup enum uses. Adding
-                // (length - 1) instead of subtracting 1 keeps the modulo positive.
-                const int tabCount = 4;
+                // Tab indices count along TabOrder (the panel's left-to-right order).
+                // Adding (length - 1) instead of subtracting 1 keeps the modulo positive.
+                int tabCount = TabOrder.Length;
                 int next = (manager.CurrentTab + (backward ? tabCount - 1 : 1)) % tabCount;
 
                 manager.CurrentTab = next;
@@ -669,6 +707,28 @@ namespace AccessibilityMod.Inventory
                     var type = view.GetViewType();
                     return type == Il2CppSunshine.Views.ViewType.INVENTORY
                         || type == Il2CppSunshine.Views.ViewType.INVENTORY_PAWN;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// True while the PAWN SHOP variant of the inventory is the current view (it has
+        /// no tabs; everything sits in the PAWNABLES group). Same single source of truth
+        /// as IsInventoryViewOpen.
+        /// </summary>
+        public static bool IsPawnShopOpen
+        {
+            get
+            {
+                try
+                {
+                    var view = Il2CppSunshine.Views.ViewController.GetCurrentView();
+                    return view != null
+                        && view.GetViewType() == Il2CppSunshine.Views.ViewType.INVENTORY_PAWN;
                 }
                 catch
                 {

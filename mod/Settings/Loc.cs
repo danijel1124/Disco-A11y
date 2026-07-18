@@ -189,15 +189,29 @@ namespace AccessibilityMod.Settings
             ["InvTabWithCountOne"] = (
                 "Tab {0}: 1 item.",
                 "Tab {0}: 1 Gegenstand."),
-            ["InvTabOnlyInInventory"] = (
-                "Tab switching works inside the inventory. Press I to open it.",
-                "Tab-Wechsel geht nur im Inventar. Öffne es mit I."),
+            // Only reachable with the inventory OPEN but the game's InventoryManager
+            // missing - an internal error, not a closed inventory. The old text ("Press I
+            // to open it") gave instructions that were wrong in the only situation the
+            // line can play (PR review cleanup).
+            ["InvTabUnavailable"] = (
+                "Tab switching is not available right now.",
+                "Tab-Wechsel ist gerade nicht möglich."),
             ["InvTabEmpty"] = (
                 "Tab {0}: no items.",
                 "Tab {0}: keine Objekte."),
             ["InvNoItems"] = (
                 "No items.",
                 "Keine Objekte."),
+            // Neutral tab announcement when the item COUNT could not be read: claiming
+            // "no items" on an interop error would sell a full tab as empty (PR review
+            // cleanup). {0} = tab name.
+            ["InvTabNoCount"] = (
+                "Tab {0}.",
+                "Tab {0}."),
+            // The current tab itself could not be determined - neutral, no invented state.
+            ["InvTabReadError"] = (
+                "Inventory tab could not be read.",
+                "Inventar-Tab konnte nicht gelesen werden."),
             ["InvSlotEmpty"] = (
                 "empty",
                 "leer"),
@@ -219,20 +233,27 @@ namespace AccessibilityMod.Settings
                 "Heilung ist gerade nicht verfügbar."),
             ["HealWordHealth"] = ("health", "Gesundheit"),
             ["HealWordMorale"] = ("morale", "Moral"),
+            // Healed, but the charge count could not be read: say so honestly instead of
+            // fabricating a number (PR review cleanup - the old code could announce "0
+            // charges left" when the true count was simply unknown). {0} = health/morale.
+            ["HealedNoCount"] = (
+                "{0} restored.",
+                "{0} aufgefüllt."),
             // The thought cabinet splash screen: the research result a sighted player
             // reads off the full-screen panel when a thought finishes cooking.
-            ["ThoughtCompleted"] = (
-                "Thought research completed: {0}. Effect: {1}",
-                "Gedanke fertig durchdacht: {0}. Effekt: {1}"),
+            // (A "ThoughtCompleted" variant with an effect slot existed here but was
+            // never referenced - removed as dead, the effect travels as its own part.)
             ["ThoughtCompletedNoEffect"] = (
                 "Thought research completed: {0}.",
                 "Gedanke fertig durchdacht: {0}."),
             // The splash screen a finished thought opens is modal and its close button is
             // mouse-only - a keyboard player needs to be TOLD how to get out (bug #57b:
             // "I can walk but not interact" = trapped behind this invisible fullscreen).
+            // {0} = the speakable name of the LIVE CloseSplash binding, so the hint stays
+            // right after remapping (never hardcode key names in announcements).
             ["SplashCloseHint"] = (
-                "Press Enter to close this screen.",
-                "Enter schließt diesen Bildschirm."),
+                "Press {0} to close this screen.",
+                "{0} schließt diesen Bildschirm."),
             // Name of the splash for the screen announcer ("which screen am I on?").
             ["Screen_THOUGHTSPLASHSCREEN"] = (
                 "Research result",

@@ -12,11 +12,12 @@ namespace AccessibilityMod.Patches
     /// healing charge from a carried healing item. Both buttons are mouse-only: no game
     /// key reaches them, so a keyboard player could carry medicine and never use it.
     ///
-    /// Ctrl+1 heals health (Endurance pool), Ctrl+2 heals morale (Volition pool) - the
-    /// bindings are remappable; these are the defaults. (KeyCode.Plus was the first
-    /// choice but never fired on a German QWERTZ layout, so healing moved to digits,
-    /// which fire on every layout - see KeyBindings.) The keys drive the game's own
-    /// HealingButton.ApplyHeal - the same code path as the click, so all game rules
+    /// Ctrl+H heals health (Endurance pool), Shift+H heals morale (Volition pool) - the
+    /// bindings are remappable; these are the defaults. (Two earlier bindings were
+    /// abandoned: KeyCode.Plus never fired on German QWERTZ, and Ctrl+digits let the
+    /// game silently pick a dialogue option, because it reads digits in conversations
+    /// regardless of held Ctrl - full history in KeyBindings.) The keys drive the game's
+    /// own HealingButton.ApplyHeal - the same code path as the click, so all game rules
     /// (charge consumption, animations, notifications) apply.
     /// </summary>
     public static class HealingKeyActions
@@ -57,10 +58,22 @@ namespace AccessibilityMod.Patches
 
                 button.ApplyHeal();
 
-                int left = GetCharges(pool);
-                if (left < 0) left = Math.Max(0, charges - 1); // pools unavailable - infer
-                TolkScreenReader.Instance.Speak(Loc.Get(healedKey, left), true);
-                MelonLogger.Msg($"[HEAL] {pool} healed via keyboard, {left} charges left");
+                // Remaining charges: the game consumes exactly one per ApplyHeal, so
+                // derive the count from the value read BEFORE the heal. Re-reading here
+                // is a trap (PR review): a delayed deduction still reports the old value
+                // (+1 too many), and when the pre-heal read already failed (-1) there is
+                // no number to derive - then say "restored" without inventing a count.
+                if (charges > 0)
+                {
+                    int left = charges - 1;
+                    TolkScreenReader.Instance.Speak(Loc.Get(healedKey, left), true);
+                    MelonLogger.Msg($"[HEAL] {pool} healed via keyboard, {left} charges left");
+                }
+                else
+                {
+                    TolkScreenReader.Instance.Speak(Loc.Get("HealedNoCount", word), true);
+                    MelonLogger.Msg($"[HEAL] {pool} healed via keyboard, charge count unknown");
+                }
             }
             catch (Exception ex)
             {
@@ -68,7 +81,12 @@ namespace AccessibilityMod.Patches
             }
         }
 
-        private static int GetCharges(SkillType pool)
+        /// <summary>
+        /// Healing charges left for a pool, -1 when unreadable (pools not up yet).
+        /// THE one healing-charge lookup - the character sheet announcement and the dev
+        /// bridge use it too; it existed three times before (PR review cleanup).
+        /// </summary>
+        public static int GetCharges(SkillType pool)
         {
             try
             {

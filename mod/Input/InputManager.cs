@@ -62,6 +62,25 @@ namespace AccessibilityMod.Input
                 return;
             }
 
+            // Thought splash exit (bug #57b). The research-result splash is modal, its
+            // close button is mouse-only, and NOTHING else closes it from the keyboard -
+            // physical Enter, EventSystem submit and a synthetic click all bounced off in
+            // live testing (17.07.2026). This check must run FIRST (PR review findings
+            // 2+4): before the dialogue gate, because the splash can open while
+            // IsConversationActive is still true (Disco runs many interactions as
+            // conversations) and the player must never be trapped without a keyboard
+            // exit - and before the interact dispatch below, because otherwise the
+            // interact key would first start an autowalk to some world object behind
+            // the modal and only then close the splash.
+            if (KeyBindings.IsPressed(GameKey.CloseSplash)
+                || KeyBindings.IsPressed(GameKey.InteractWithSelected))
+            {
+                if (TryCloseThoughtSplash())
+                {
+                    return; // the key was consumed by the splash - don't also interact
+                }
+            }
+
             // On-demand current selection announcement
             if (KeyBindings.IsPressed(GameKey.AnnounceCurrentSelection))
             {
@@ -216,22 +235,6 @@ namespace AccessibilityMod.Input
                 navigationSystem.StopMovement();
             }
 
-            // Thought splash exit (bug #57b). The research-result splash is modal, its
-            // close button is mouse-only, and NOTHING else closes it from the keyboard -
-            // physical Enter, EventSystem submit and a synthetic click all bounced off in
-            // live testing (17.07.2026). The game's own controller path is the one
-            // working non-mouse exit, so Enter (and the mod's interact key) drive exactly
-            // that: OnControllerButtonToClosePressed, the same call a gamepad B makes.
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Return)
-                || UnityEngine.Input.GetKeyDown(KeyCode.KeypadEnter)
-                || KeyBindings.IsPressed(GameKey.InteractWithSelected))
-            {
-                if (TryCloseThoughtSplash())
-                {
-                    return; // the key was consumed by the splash - don't also interact
-                }
-            }
-
             // Inventory tab switching (Ctrl+Tab / Ctrl+Shift+Tab). Both share the Tab base
             // key and IsPressed tolerates extra modifiers, so the Shift variant must be
             // checked first. Only acts while the inventory screen is actually open.
@@ -246,8 +249,11 @@ namespace AccessibilityMod.Input
                     Inventory.InventoryNavigationHandler.Instance.SwitchTab(backward: false);
             }
 
-            // Healing keys (Ctrl+1 health, Ctrl+2 morale). Distinct base keys, so the
-            // else-if is only a tidy "one heal per frame" guard, not a tie-breaker.
+            // Healing keys (Ctrl+H health, Shift+H morale - digits are off limits, the
+            // game reads them in dialogue regardless of Ctrl; see KeyBindings). Both
+            // share base key H with the plain-H status announcement, which yields to
+            // them in HandleDialogSafeKeys (specific-binding-first rule). The else-if
+            // also breaks the Ctrl+Shift+H tie in favour of health.
             if (KeyBindings.IsPressed(GameKey.HealHealth))
             {
                 Patches.HealingKeyActions.HealHealth();
@@ -352,7 +358,11 @@ namespace AccessibilityMod.Input
             || KeyBindings.IsPressed(GameKey.NavigateToSelected) || KeyBindings.IsPressed(GameKey.InteractWithSelected)
             || KeyBindings.IsPressed(GameKey.CreateWaypoint) || KeyBindings.IsPressed(GameKey.FocusWaypoints)
             || KeyBindings.IsPressed(GameKey.DeleteWaypoint) || KeyBindings.IsPressed(GameKey.ToggleSortingMode)
-            || KeyBindings.IsPressed(GameKey.ScanSceneByDistance);
+            || KeyBindings.IsPressed(GameKey.ScanSceneByDistance)
+            // Healing is world-only too (the HUD with its plus buttons is gone during
+            // dialogue) - listing it here gives a blocked Ctrl+H/Shift+H the same spoken
+            // "in dialogue" hint instead of silence.
+            || KeyBindings.IsPressed(GameKey.HealHealth) || KeyBindings.IsPressed(GameKey.HealMorale);
 
         /// <summary>
         /// Keys that make sense both in the world and while the dialogue UI is up:
@@ -385,8 +395,14 @@ namespace AccessibilityMod.Input
                 OrbTextVocalizationPatches.ToggleOrbAnnouncements();
             }
 
-            // Character status announcement
-            if (KeyBindings.IsPressed(GameKey.AnnounceStatus))
+            // Character status announcement. Plain H shares its base key with the two
+            // healing chords (Ctrl+H / Shift+H) and IsPressed tolerates extra held
+            // modifiers - so status only speaks when NO healing binding matches,
+            // otherwise one keypress would heal AND announce (specific-binding-first
+            // rule, same convention as the other shared-base-key chains).
+            if (KeyBindings.IsPressed(GameKey.AnnounceStatus)
+                && !KeyBindings.IsPressed(GameKey.HealHealth)
+                && !KeyBindings.IsPressed(GameKey.HealMorale))
             {
                 Patches.CharacterStatusAnnouncement.AnnounceFullStatus();
             }

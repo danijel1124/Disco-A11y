@@ -128,16 +128,28 @@ namespace AccessibilityMod.Settings
             [GameKey.InventoryPrevTab] = new KeyBinding(KeyCode.Tab, requireCtrl: true, requireShift: true),
 
             // Healing (health/morale bar plus buttons, mouse-only in the game).
-            // KeyCode.Plus was the first choice but does NOT fire Input.GetKeyDown on a
-            // German QWERTZ layout (verified live 17.07.2026 - the mod never saw the
-            // key). Punctuation keycodes are layout-bound, exactly the trap this project
-            // moved away from. Digits fire reliably on every layout and need no numpad,
-            // so healing sits on Ctrl+1 (health = first bar) and Ctrl+2 (morale = second
-            // bar). The Ctrl guard keeps them clear of the in-conversation dialogue
-            // number shortcuts (and healing is blocked during dialogue anyway). Base
-            // keys Alpha1/Alpha2 have no plain binding, so no tolerant-match collision.
-            [GameKey.HealHealth] = new KeyBinding(KeyCode.Alpha1, requireCtrl: true),
-            [GameKey.HealMorale] = new KeyBinding(KeyCode.Alpha2, requireCtrl: true),
+            // Two dead ends before this binding, both documented so nobody walks back in:
+            //  1. KeyCode.Plus does NOT fire Input.GetKeyDown on a German QWERTZ layout
+            //     (verified live 17.07.2026 - the mod never saw the key). Punctuation
+            //     keycodes are layout-bound, exactly the trap this project moved away from.
+            //  2. Ctrl+1/Ctrl+2 (digits) fire on every layout - but the GAME reads the
+            //     digit keys during conversations REGARDLESS of held Ctrl (worklog: "plain
+            //     8 also picks dialogue option 8"). A habitual Ctrl+1 mid-dialogue would
+            //     silently commit dialogue option 1 - an unrecoverable story decision
+            //     (PR review finding 1). Digits are therefore off limits for mod hotkeys.
+            // H is the status key that already answers "how are health and morale?", so
+            // healing lives on its modifiers (user decision 18.07.2026): Ctrl+H heals
+            // health, Shift+H heals morale. The game does not read H in dialogue. Plain H
+            // stays AnnounceStatus - HandleDialogSafeKeys yields it to these two chords
+            // (specific-binding-first rule, see IsPressed).
+            [GameKey.HealHealth] = new KeyBinding(KeyCode.H, requireCtrl: true),
+            [GameKey.HealMorale] = new KeyBinding(KeyCode.H, requireShift: true),
+
+            // Enter closes the thought-research splash (its own close button is mouse-only).
+            // Remappable like every other hotkey (PR review finding 10); the spoken hint
+            // (SplashCloseHint) renders the LIVE binding via SpeakableName, never a
+            // hardcoded key name.
+            [GameKey.CloseSplash] = new KeyBinding(KeyCode.Return),
         };
 
         /// <summary>
@@ -210,8 +222,9 @@ namespace AccessibilityMod.Settings
             // Same in every preset - see Defaults for the reasoning.
             [GameKey.InventoryNextTab] = new KeyBinding(KeyCode.Tab, requireCtrl: true),
             [GameKey.InventoryPrevTab] = new KeyBinding(KeyCode.Tab, requireCtrl: true, requireShift: true),
-            [GameKey.HealHealth] = new KeyBinding(KeyCode.Alpha1, requireCtrl: true),
-            [GameKey.HealMorale] = new KeyBinding(KeyCode.Alpha2, requireCtrl: true),
+            [GameKey.HealHealth] = new KeyBinding(KeyCode.H, requireCtrl: true),
+            [GameKey.HealMorale] = new KeyBinding(KeyCode.H, requireShift: true),
+            [GameKey.CloseSplash] = new KeyBinding(KeyCode.Return),
         };
 
         /// <summary>

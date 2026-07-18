@@ -44,15 +44,19 @@ namespace AccessibilityMod.UI
         private static GameObject lastSelectedSlotObject;
         private static string lastSlotAnnouncement = "";
 
-        private static void CheckSelectedThought()
+        private static void CheckSelectedThought(bool cabinetOpen)
         {
             try
             {
-                if (!IsInThoughtCabinetView())
+                if (!cabinetOpen)
                 {
                     // Leaving the cabinet resets the tracking, so re-entering announces
-                    // the (re-)selected slot again instead of staying silent.
+                    // the (re-)selected slot again instead of staying silent. BOTH
+                    // fields must reset: clearing only the object left the same-text
+                    // guard armed, so re-entering onto the same slot (same formatted
+                    // text) stayed silent (PR review finding 8).
                     lastSelectedSlotObject = null;
+                    lastSlotAnnouncement = "";
                     return;
                 }
 
@@ -95,11 +99,13 @@ namespace AccessibilityMod.UI
         {
             try
             {
-                // The selection poll runs first and does its own view check - it must
-                // also see the "view just closed" frame to reset its tracking.
-                CheckSelectedThought();
+                // ONE view check per frame, its result passed down: the poll needs to
+                // see the "view just closed" frame to reset its tracking, and checking
+                // twice per frame doubled the cost for nothing (PR review finding 9).
+                bool cabinetOpen = IsInThoughtCabinetView();
+                CheckSelectedThought(cabinetOpen);
 
-                if (!IsInThoughtCabinetView()) return;
+                if (!cabinetOpen) return;
 
                 // Tab key - Read full thought description
                 if (UnityEngine.Input.GetKeyDown(KeyCode.Tab))
@@ -168,20 +174,19 @@ namespace AccessibilityMod.UI
         }
 
         /// <summary>
-        /// Check if we're currently in a Thought Cabinet view
+        /// Check if we're currently in a Thought Cabinet view. Asks the ViewController
+        /// (a cheap static lookup) instead of the old two FindObjectOfType scene scans -
+        /// those ran EVERY frame, mostly while the cabinet was closed (PR review finding
+        /// 9). Same pattern as InventoryNavigationHandler.IsInventoryViewOpen. The old
+        /// second check (THCPage) was DiscoPages, which is dead code on PC - PC screens
+        /// run through Sunshine.Views (same finding as the map/ScreenAnnouncer work).
         /// </summary>
         private static bool IsInThoughtCabinetView()
         {
             try
             {
-                var thoughtCabinetView = UnityEngine.Object.FindObjectOfType<Il2CppSunshine.Views.ThoughtCabinetView>();
-                if (thoughtCabinetView != null && thoughtCabinetView.gameObject.activeInHierarchy)
-                {
-                    return true;
-                }
-
-                var thcPage = UnityEngine.Object.FindObjectOfType<THCPage>();
-                return thcPage != null && thcPage.gameObject.activeInHierarchy;
+                var view = Il2CppSunshine.Views.ViewController.GetCurrentView();
+                return view != null && view.GetViewType() == Il2CppSunshine.Views.ViewType.THOUGHTCABINET;
             }
             catch (Exception ex)
             {

@@ -58,7 +58,11 @@ public static class GameKeyCatalog
 
         new("InventoryNextTab", "Inventory: next tab", "Inventar: nächster Tab", "Tab|True|False|False", "Tab|True|False|False", "Tab|True|False|False"),
         new("InventoryPrevTab", "Inventory: previous tab", "Inventar: vorheriger Tab", "Tab|True|False|True", "Tab|True|False|True", "Tab|True|False|True"),
-        new("HealHealth", "Use a health healing charge", "Gesundheits-Heilladung verwenden", "Alpha1|True|False|False", "Alpha1|True|False|False", "Alpha1|True|False|False"),
-        new("HealMorale", "Use a morale healing charge", "Moral-Heilladung verwenden", "Alpha2|True|False|False", "Alpha2|True|False|False", "Alpha2|True|False|False"),
+        // Healing shares base key H with AnnounceStatus on purpose (H = the "how are
+        // health and morale?" key); digits are off limits - the game reads them in
+        // dialogue regardless of Ctrl and would commit a dialogue option.
+        new("HealHealth", "Use a health healing charge", "Gesundheits-Heilladung verwenden", "H|True|False|False", "H|True|False|False", "H|True|False|False"),
+        new("HealMorale", "Use a morale healing charge", "Moral-Heilladung verwenden", "H|False|False|True", "H|False|False|True", "H|False|False|True"),
+        new("CloseSplash", "Close the thought research screen", "Forschungsergebnis-Bildschirm schließen", "Return|False|False|False", "Return|False|False|False", "Return|False|False|False"),
     };
 }

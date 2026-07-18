@@ -33,7 +33,6 @@ namespace AccessibilityMod.Patches
                 }
 
                 var characterSheet = world.you;
-                var playerCharacter = PlayerCharacter.Singleton;
 
                 // Get max health and morale from skills using maximumValue
                 var endurance = characterSheet.GetSkill(SkillType.ENDURANCE);
@@ -51,35 +50,26 @@ namespace AccessibilityMod.Patches
                     announcement += $" of {volition.maximumValue}";
                 }
 
-                // Add healing items information
-                if (playerCharacter?.healingPools != null)
-                {
-                    try
-                    {
-                        // Get healing charges for health (Endurance) and morale (Volition)
-                        int healthCharges = playerCharacter.healingPools.GetHealingChargetsForSkill(SkillType.ENDURANCE);
-                        int moraleCharges = playerCharacter.healingPools.GetHealingChargetsForSkill(SkillType.VOLITION);
+                // Add healing items information - via the one shared charge lookup
+                // (HealingKeyActions.GetCharges; it swallows its own errors and returns
+                // -1 for "unreadable", which simply stays unannounced here).
+                int healthCharges = HealingKeyActions.GetCharges(SkillType.ENDURANCE);
+                int moraleCharges = HealingKeyActions.GetCharges(SkillType.VOLITION);
 
-                        if (healthCharges > 0 || moraleCharges > 0)
+                if (healthCharges > 0 || moraleCharges > 0)
+                {
+                    announcement += ". Healing items: ";
+                    if (healthCharges > 0)
+                    {
+                        announcement += $"{healthCharges} health";
+                        if (moraleCharges > 0)
                         {
-                            announcement += ". Healing items: ";
-                            if (healthCharges > 0)
-                            {
-                                announcement += $"{healthCharges} health";
-                                if (moraleCharges > 0)
-                                {
-                                    announcement += $", {moraleCharges} morale";
-                                }
-                            }
-                            else if (moraleCharges > 0)
-                            {
-                                announcement += $"{moraleCharges} morale";
-                            }
+                            announcement += $", {moraleCharges} morale";
                         }
                     }
-                    catch (Exception ex)
+                    else if (moraleCharges > 0)
                     {
-                        MelonLogger.Warning($"Could not access healing items: {ex.Message}");
+                        announcement += $"{moraleCharges} morale";
                     }
                 }
 

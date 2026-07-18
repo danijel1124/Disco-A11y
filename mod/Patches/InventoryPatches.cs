@@ -124,7 +124,9 @@ namespace AccessibilityMod.Patches
                     MelonLogger.Msg($"[Inventory] Tab change detected: {lastAnnouncedTab} -> {__instance.CurrentTab}");
                     lastAnnouncedTab = __instance.CurrentTab;
                     
-                    ItemTabGroup tabGroup = (ItemTabGroup)__instance.CurrentTab;
+                    // CurrentTab int -> tab via the ONE shared tab order (PR review
+                    // cleanup: this was a raw enum cast, a fourth encoding of the order).
+                    ItemTabGroup tabGroup = InventoryNavigationHandler.TabFromIndex(__instance.CurrentTab);
                     InventoryNavigationHandler.Instance.OnTabChanged(tabGroup);
                 }
                 else
@@ -137,18 +139,6 @@ namespace AccessibilityMod.Patches
             catch (Exception ex)
             {
                 MelonLogger.Error($"Error in InventoryManager_UpdateCurrentlySelectedTab_Patch: {ex.Message}");
-            }
-        }
-        
-        private static string GetTabName(int tabIndex)
-        {
-            switch (tabIndex)
-            {
-                case 0: return "Tools";
-                case 1: return "Clothes";
-                case 2: return "Pawnables";
-                case 3: return "Reading";
-                default: return null;
             }
         }
     }
@@ -186,74 +176,19 @@ namespace AccessibilityMod.Patches
         {
             try
             {
-                MelonLogger.Msg($"[InventoryHighlighter] OnSelect called on: {__instance?.name}");
+                if (__instance == null) return;
+                MelonLogger.Msg($"[InventoryHighlighter] OnSelect called on: {__instance.name}");
 
-                // Empty grid slots now say a short "leer" instead of staying silent.
-                // The earlier "silent" choice (to avoid an "Empty slot" wall during the
-                // whole-grid scan) backfired: the game compacts items into the first
-                // cells, so navigating the sparse grid lands mostly on empty cells - and
-                // silence there reads as "navigation is broken, I hear nothing" (bug #2,
-                // Jana 17.07.2026). A terse "leer" gives every keypress feedback while
-                // staying far shorter than the old "Empty inventory slot".
-                string emptyLabel = Settings.Loc.Get("InvSlotEmpty");
-
-                // First, try to get InventoryItemSlot component directly on this GameObject
-                var inventoryItemSlot = __instance.GetComponent<Il2CppDiscoPages.Elements.Inventory.InventoryItemSlot>();
-                if (inventoryItemSlot != null)
-                {
-                    if (inventoryItemSlot.item != null && !string.IsNullOrEmpty(inventoryItemSlot.item.displayName))
-                        AnnounceOnce(RTLHelper.FixForScreenReader(inventoryItemSlot.item.displayName));
-                    else if (!string.IsNullOrEmpty(inventoryItemSlot.itemName))
-                        AnnounceOnce(RTLHelper.FixForScreenReader(inventoryItemSlot.itemName));
-                    else
-                        AnnounceOnce(emptyLabel);
-                    return;
-                }
-
-                // Try to find InventoryItemSlot in children
-                var childInventoryItemSlot = __instance.GetComponentInChildren<Il2CppDiscoPages.Elements.Inventory.InventoryItemSlot>();
-                if (childInventoryItemSlot != null)
-                {
-                    if (childInventoryItemSlot.item != null && !string.IsNullOrEmpty(childInventoryItemSlot.item.displayName))
-                        AnnounceOnce(RTLHelper.FixForScreenReader(childInventoryItemSlot.item.displayName));
-                    else if (!string.IsNullOrEmpty(childInventoryItemSlot.itemName))
-                        AnnounceOnce(RTLHelper.FixForScreenReader(childInventoryItemSlot.itemName));
-                    else
-                        AnnounceOnce(emptyLabel);
-                    return;
-                }
-
-                // If no InventoryItemSlot found, check numbered slots via InventoryViewData
-                // Check if this is a numbered slot (regular inventory)
-                if (int.TryParse(__instance?.name, out int slotIndex))
-                {
-                    string itemName = InventoryHighlighterHelper.GetInventoryItemAtSlot(slotIndex);
-                    if (!string.IsNullOrEmpty(itemName))
-                    {
-                        MelonLogger.Msg($"[InventoryHighlighter] Found item at slot {slotIndex}: {itemName}");
-                        AnnounceOnce(itemName);
-                    }
-                    else
-                    {
-                        AnnounceOnce(emptyLabel); // feedback so navigation never feels dead
-                    }
-                }
-                // Check if this is an equipment slot
-                else
-                {
-                    string equippedItemName = InventoryHighlighterHelper.GetEquippedItemName(__instance?.name);
-                    if (!string.IsNullOrEmpty(equippedItemName))
-                    {
-                        MelonLogger.Msg($"[InventoryHighlighter] Found equipped item via InventoryViewData: {equippedItemName}");
-                        AnnounceOnce(equippedItemName);
-                    }
-                    else
-                    {
-                        // Equipment slots keep announcing "empty" - unlike the grid, each of
-                        // them is a distinct place ("Gloves: empty" answers a real question).
-                        AnnounceOnce(InventoryHighlighterHelper.GetSlotAnnouncement(__instance?.name));
-                    }
-                }
+                // ONE resolution chain for "what does this slot say" - the same
+                // GetSelectionText the on-demand announce key uses (this patch used to
+                // carry its own copy of the whole four-step chain; PR review cleanup).
+                // "" = an empty GRID slot: it speaks a terse "leer" so navigating the
+                // sparse grid never feels dead (bug #2, Jana 17.07.2026) while staying
+                // far shorter than the old "Empty inventory slot". Equipment slots come
+                // back as "Gloves: empty" from the helper - each of those is a distinct
+                // place, so the full wording answers a real question there.
+                string text = InventoryHighlighterHelper.GetSelectionText(__instance.gameObject);
+                AnnounceOnce(text == "" ? Settings.Loc.Get("InvSlotEmpty") : text);
             }
             catch (Exception ex)
             {
@@ -411,10 +346,11 @@ namespace AccessibilityMod.Patches
                     var tabContents = inventoryData.tabContents;
                     if (tabContents == null) return null;
 
-                    // Check if we're in pawn shop by looking at active view type
-                    var currentView = UnityEngine.Object.FindObjectOfType<Il2CppSunshine.Views.View>();
-                    bool isInPawnShop = currentView != null &&
-                                       currentView.GetViewType() == Il2CppSunshine.Views.ViewType.INVENTORY_PAWN;
+                    // Pawn shop or normal inventory? Asked via the same single source of
+                    // truth as every other "which view?" question (PR review cleanup: the
+                    // old FindObjectOfType<View> grabbed an ARBITRARY view object of the
+                    // scene, on top of being a scene scan).
+                    bool isInPawnShop = InventoryNavigationHandler.IsPawnShopOpen;
 
                     if (isInPawnShop)
                     {
@@ -467,6 +403,27 @@ namespace AccessibilityMod.Patches
                 MelonLogger.Msg($"Error getting inventory item at slot {slotIndex}: {ex.Message}");
             }
             return null;
+        }
+
+        /// <summary>
+        /// Just the speakable NAME of an item key ("gloves_garden" -> "Gelbe
+        /// Gartenhandschuhe"), with the same displayName -> listName -> raw-key fallback
+        /// chain the full formatter uses (PR review cleanup: DescribeTab resolved names
+        /// itself and skipped the listName step, so a missing displayName leaked the raw
+        /// internal key into speech). For the full read - bonuses, description, value -
+        /// use GetFormattedItemName instead.
+        /// </summary>
+        public static string GetItemDisplayName(string itemName, Il2CppSunshine.Metric.InventoryViewData inventoryData)
+        {
+            if (string.IsNullOrEmpty(itemName)) return null;
+
+            var item = inventoryData?.GetLibrary()?.GetByName(itemName);
+            if (item != null)
+            {
+                if (!string.IsNullOrEmpty(item.displayName)) return RTLHelper.FixForScreenReader(item.displayName);
+                if (!string.IsNullOrEmpty(item.listName)) return RTLHelper.FixForScreenReader(item.listName);
+            }
+            return RTLHelper.FixForScreenReader(itemName);
         }
 
         private static string GetFormattedItemName(string itemName, Il2CppSunshine.Metric.InventoryViewData inventoryData)
